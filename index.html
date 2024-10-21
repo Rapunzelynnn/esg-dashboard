@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESG and Stock Performance Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+      #chart {
+        width: 100%;
+        height: 800px;
+      }
+      #debug {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESG and Stock Performance Dashboard</h1>
+    <div id="chart"></div>
+    <div id="debug"></div>
+    <script>
+      function debug(message) {
+        console.log(message);
+        document.getElementById("debug").innerHTML += message + "<br>";
+      }
+
+      debug("Script started");
+
+      function loadCSV(file) {
+        return new Promise((resolve, reject) => {
+          Papa.parse(file, {
+            download: true,
+            header: true,
+            dynamicTyping: true,
+            complete: (results) => {
+              debug(`Loaded ${results.data.length} rows from ${file}`);
+              resolve(results.data);
+            },
+            error: (error) => reject(error),
+          });
+        });
+      }
+
+      function calculatePriceChange(prices) {
+        if (prices.length < 2) return 0;
+        const firstPrice = prices[0];
+        const lastPrice = prices[prices.length - 1];
+        return ((lastPrice - firstPrice) / firstPrice) * 100;
+      }
+
+      async function createDashboard() {
+        try {
+          const [esgData, stockPriceData] = await Promise.all([
+            loadCSV("sp500_esg_data.csv"),
+            loadCSV("sp500_price_data.csv"),
+          ]);
+
+          debug(
+            `ESG Data: ${esgData.length} rows, Stock Price Data: ${stockPriceData.length} rows`
+          );
+
+          if (esgData.length === 0 || stockPriceData.length === 0) {
+            throw new Error("One or both CSV files are empty");
+          }
+
+          debug("Sample ESG Data: " + JSON.stringify(esgData[0]));
+          debug(
+            "Sample Stock Price Data: " + JSON.stringify(stockPriceData[0])
+          );
+
+          const data = esgData.map((company) => {
+            const companyPrices = stockPriceData
+              .map((row) => row[company.Symbol])
+              .filter((price) => price !== undefined);
+            const priceChange = calculatePriceChange(companyPrices);
+            return {
+              ...company,
+              priceChange: priceChange,
+            };
+          });
+
+          debug(`Processed ${data.length} companies`);
+          debug("Sample processed data: " + JSON.stringify(data[0]));
+
+          const validData = data.filter(
+            (d) =>
+              d.totalEsg !== undefined &&
+              d.priceChange !== undefined &&
+              d.marketCap !== undefined
+          );
+          debug(`Valid data points: ${validData.length}`);
+
+          if (validData.length === 0) {
+            throw new Error("No valid data points after processing");
+          }
+
+          const marketCaps = validData.map((d) => d.marketCap);
+          const minMarketCap = Math.min(...marketCaps);
+          const maxMarketCap = Math.max(...marketCaps);
+          const normalizeMarketCap = (cap) =>
+            (cap - minMarketCap) / (maxMarketCap - minMarketCap);
+          const markerSizes = validData.map(
+            (d) => normalizeMarketCap(d.marketCap) * 50 + 5
+          );
+
+          const trace = {
+            x: validData.map((d) => d.totalEsg),
+            y: validData.map((d) => d.priceChange),
+            mode: "markers",
+            type: "scatter",
+            text: validData.map(
+              (d) =>
+                `${d.Symbol}: ${d["Full Name"]}<br>Sector: ${
+                  d["GICS Sector"]
+                }<br>ESG Score: ${
+                  d.totalEsg
+                }<br>Price Change: ${d.priceChange.toFixed(
+                  2
+                )}%<br>Market Cap: $${(d.marketCap / 1e9).toFixed(2)}B`
+            ),
+            marker: {
+              size: markerSizes,
+              sizemode: "diameter",
+              color: validData.map((d) => d.priceChange),
+              colorscale: "RdYlGn",
+              colorbar: { title: "Price Change (%)" },
+              showscale: true,
+            },
+          };
+
+          const layout = {
+            title: "ESG Score vs Stock Price Performance",
+            xaxis: { title: "ESG Score" },
+            yaxis: { title: "Price Change (%)" },
+            hovermode: "closest",
+            showlegend: false,
+          };
+
+          debug("Trace and layout created");
+
+          Plotly.newPlot("chart", [trace], layout);
+          debug("Plot created successfully");
+        } catch (error) {
+          debug("Error: " + error.message);
+        }
+      }
+
+      createDashboard();
+    </script>
+  </body>
+</html>
