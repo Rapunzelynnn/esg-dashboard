@@ -4,8 +4,6 @@ import type { ESGData, PriceData } from '../types';
 interface RawESGData {
 	Symbol: string;
 	'Full Name': string;
-	'GICS Sector': string;
-	'GICS Sub-Industry': string;
 	industry_code: string;
 	industry_name: string;
 	data_availability: string;
@@ -45,8 +43,6 @@ export async function loadESGData(url: string): Promise<ESGData[]> {
 	return data.map((row: RawESGData) => ({
 		symbol: row.Symbol,
 		fullName: row['Full Name'],
-		gicsSector: row['GICS Sector'],
-		gicsSubIndustry: row['GICS Sub-Industry'],
 		industry_code: row.industry_code,
 		industry_name: row.industry_name,
 		data_availability: row.data_availability,

@@ -25,6 +25,36 @@ export interface ESGData {
 	overallRisk: number;
 	processed: boolean;
 }
+export interface Company {
+	symbol: string;
+	fullName: string;
+	industryCode: string;
+	industryName: string;
+	location: string;
+	marketCap: number;
+	beta: number;
+	esgScores: {
+		total: number;
+		environmental: {
+			score: number;
+			mean: number;
+			max: number;
+		};
+		social: {
+			score: number;
+			mean: number;
+			max: number;
+		};
+		governance: {
+			score: number;
+			mean: number;
+			max: number;
+		};
+		percentile: number;
+		ratingYear: number;
+		ratingMonth: number;
+	};
+}
 
 export interface FilterState {
 	timeRange: [Date, Date];

@@ -10,7 +10,6 @@
 			.filter((company) => {
 				const matchesSector =
 					$filterState.selectedSectors.length === 0 ||
-					$filterState.selectedSectors.includes(company.gicsSector);
 				const matchesScore =
 					company.totalEsg >= $filterState.esgScoreRange[0] &&
 					company.totalEsg <= $filterState.esgScoreRange[1];
