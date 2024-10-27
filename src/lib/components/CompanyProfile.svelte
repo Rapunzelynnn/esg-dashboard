@@ -1,69 +1,60 @@
-<!-- lib/components/CompanySearch.svelte -->
 <script lang="ts">
-	import { companies, selectedCompany } from '$lib/stores';
-	let searchTerm = '';
+	import { selectedCompany } from '$lib/stores';
 
-	$: filteredCompanies = searchTerm
-		? $companies
-				.filter((company) => {
-					const searchLower = searchTerm.toLowerCase();
-					const symbolLower = (company.symbol || '').toLowerCase();
-					const fullNameLower = (company.fullName || '').toLowerCase();
-					const combinedNameLower = `${symbolLower} ${fullNameLower}`.toLowerCase();
+	function formatMarketCap(value: number): string {
+		if (!value || isNaN(value)) return '$0.00';
+		if (value >= 1_000_000_000_000) {
+			return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
+		} else if (value >= 1_000_000_000) {
+			return `$${(value / 1_000_000_000).toFixed(2)} billion`;
+		} else if (value >= 1_000_000) {
+			return `$${(value / 1_000_000).toFixed(2)} million`;
+		}
+		return `$${value.toFixed(2)}`;
+	}
 
-					// Debug logging for AAPL
-					if (company.symbol === 'AAPL') {
-						console.log('AAPL search check:', {
-							searchTerm: searchLower,
-							symbol: symbolLower,
-							fullName: fullNameLower,
-							matches: combinedNameLower.includes(searchLower)
-						});
-					}
-
-					return combinedNameLower.includes(searchLower);
-				})
-				.slice(0, 5)
-		: [];
-
-	function selectCompany(company) {
-		console.log('Selected company:', company); // Debug selected company
-		selectedCompany.set(company);
-		searchTerm = '';
+	function formatBeta(value: number): string {
+		if (!value || isNaN(value)) return '0.00';
+		return value.toFixed(2);
 	}
 </script>
 
-<div class="relative w-full max-w-md">
-	<input
-		type="text"
-		bind:value={searchTerm}
-		placeholder="Search by company name or symbol"
-		class="w-full p-2 border rounded-md"
-	/>
-	{#if searchTerm && filteredCompanies.length > 0}
-		<div
-			class="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
-		>
-			{#each filteredCompanies as company}
-				<!-- Debug display -->
-				{@const displayName = company.fullName || `${company.symbol} Inc.`}
-				<button
-					class="w-full px-4 py-2 text-left hover:bg-gray-100"
-					on:click={() => selectCompany(company)}
-				>
-					<div class="flex justify-between items-center">
-						<span class="font-semibold">{displayName}</span>
-						<span class="text-blue-600">{company.symbol}</span>
+{#if $selectedCompany}
+	<div class="bg-white p-8 rounded-xl shadow-lg max-w-3xl mx-auto">
+		<div class="flex items-start justify-between mb-6">
+			<div>
+				<h2 class="text-3xl font-bold mb-2 text-gray-900">{$selectedCompany.fullName}</h2>
+				<div class="text-gray-600">
+					<div class="text-lg">
+						{$selectedCompany.industryCode} - {$selectedCompany.industryName}
 					</div>
-					<div class="text-sm text-gray-600">
-						{company.industryCode} - {company.industryName || 'Industry'}
-					</div>
-				</button>
-			{/each}
+				</div>
+			</div>
+			<div class="text-xl font-semibold text-blue-600">
+				{$selectedCompany.symbol}
+			</div>
 		</div>
-	{:else if searchTerm}
-		<div class="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg p-4 text-gray-500">
-			No matches found
+
+		<div class="grid grid-cols-2 gap-6">
+			<div class="bg-gray-50 p-6 rounded-lg border border-gray-100">
+				<div class="text-gray-600 text-sm mb-1">Market Cap</div>
+				<div class="text-2xl font-bold text-gray-900">
+					{formatMarketCap($selectedCompany.marketCap)}
+				</div>
+			</div>
+			<div class="bg-gray-50 p-6 rounded-lg border border-gray-100">
+				<div class="text-gray-600 text-sm mb-1">Beta</div>
+				<div class="text-2xl font-bold text-gray-900">
+					{formatBeta($selectedCompany.beta)}
+				</div>
+			</div>
 		</div>
-	{/if}
-</div>
+	</div>
+{:else}
+	<div
+		class="text-center text-gray-600 bg-gray-50 p-8 rounded-xl max-w-2xl mx-auto border border-gray-200"
+	>
+		<div class="text-lg mb-2">No company selected</div>
+		<div class="text-sm">Use the search bar above to find a company</div>
+	</div>
+{/if}
