@@ -57,23 +57,15 @@ export interface Company {
 }
 
 export interface FilterState {
-	timeRange: [Date, Date];
+	timeRange: Date[];
 	selectedSectors: string[];
 	selectedIndustries: string[];
 	selectedCompanies: string[];
 	locationFilter: string[];
-	esgScoreRange: [number, number];
+	esgScoreRange: number[];
 	dataAvailabilityFilter: string[];
-	sortBy: keyof Pick<
-		ESGData,
-		| 'total_esg_score'
-		| 'environmental_score'
-		| 'social_score'
-		| 'governance_score'
-		| 'marketCap'
-		| 'percentile'
-	>;
-	sortDirection: 'asc' | 'desc';
+	sortBy: string;
+	sortDirection: string;
 }
 export interface PriceData {
 	date: Date;
