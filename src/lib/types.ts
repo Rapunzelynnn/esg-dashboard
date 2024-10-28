@@ -2,10 +2,13 @@
 import type { 
     ChartData, 
     ChartOptions,
-    ScaleOptions,
     Scale,
+    LinearScaleOptions as ChartLinearScaleOptions,
+    TimeScaleOptions as ChartTimeScaleOptions,
+    CoreScaleOptions,
     Tick,
-    CoreScaleOptions
+    TickOptions,
+    TimeScaleTimeOptions
 } from 'chart.js';
 
 // Remove Recharts declarations since we're using Chart.js
@@ -93,10 +96,10 @@ export interface PriceData {
 }
 
 // New interfaces for Chart.js
-export interface StockChartData extends ChartData<'line', number[], string> {
+export interface StockChartData {
     datasets: Array<{
         label: string;
-        data: number[];
+        data: Array<{ x: Date; y: number }>;
         borderColor: string;
         backgroundColor: string;
         fill: boolean;
@@ -107,25 +110,36 @@ export interface StockChartData extends ChartData<'line', number[], string> {
     }>;
 }
 // Define custom tick options
-interface CustomTickOptions {
+interface CustomTickOptions extends Partial<TickOptions> {
     font?: {
         size: number;
     };
     color?: string;
+    maxRotation?: number;
+    minRotation?: number;
     callback?: (this: Scale<CoreScaleOptions>, tickValue: string | number, index: number, ticks: Tick[]) => string;
 }
 
-
-// Define specific scale options type
-interface CustomScaleOptions {
-    type: 'category' | 'linear';
-    display?: boolean;
+interface CustomTimeScaleOptions extends Omit<Partial<ChartTimeScaleOptions>, 'ticks' | 'time'> {
+    type: 'time';
     grid?: {
         borderColor?: string;
         display?: boolean;
     };
     ticks?: CustomTickOptions;
+    time?: Partial<TimeScaleTimeOptions>;
 }
+
+interface CustomLinearScaleOptions extends Omit<Partial<ChartLinearScaleOptions>, 'ticks'> {
+    type: 'linear';
+    grid?: {
+        borderColor?: string;
+        display?: boolean;
+    };
+    ticks?: CustomTickOptions;
+    position?: 'left' | 'right';
+}
+
 
 // Define the chart options interface
 export interface StockChartOptions extends Omit<ChartOptions<'line'>, 'scales'> {
@@ -136,8 +150,8 @@ export interface StockChartOptions extends Omit<ChartOptions<'line'>, 'scales'> 
         intersect: boolean;
     };
     scales: {
-        x: CustomScaleOptions;
-        y: CustomScaleOptions;
+        x: CustomTimeScaleOptions;
+        y: CustomLinearScaleOptions;
     };
     plugins: {
         tooltip: {
@@ -152,8 +166,8 @@ export interface StockChartOptions extends Omit<ChartOptions<'line'>, 'scales'> 
             padding: number;
             cornerRadius: number;
             displayColors: boolean;
-            callbacks?: {
-                label: (context: { parsed: { y: number } }) => string;
+            callbacks: {
+                label: (context: any) => string;
             };
         };
         legend: {

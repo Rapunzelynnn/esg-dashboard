@@ -200,24 +200,17 @@ export async function loadPriceData(symbol: string) {
             throw new Error(`No data found for symbol ${symbol}`);
         }
 
-        console.log(`Found ${symbol} at column index:`, symbolIndex);
-
         // Parse the data for this symbol
         const data: PriceData[] = rows
             .slice(1) // Skip header row
             .map(row => {
                 const columns = row.split(',');
-                const date = columns[0].trim(); // Date is first column
-                const price = parseFloat(columns[symbolIndex].trim());
-                
-                return { date, price };
+                return {
+                    date: columns[0].trim(), // Date is first column
+                    price: parseFloat(columns[symbolIndex].trim())
+                };
             })
             .filter(item => !isNaN(item.price));
-
-        console.log(`Processed ${data.length} price points for ${symbol}`);
-        if (data.length > 0) {
-            console.log('Sample data point:', data[0]);
-        }
 
         priceDataStore.update(store => {
             const newStore = new Map(store);
@@ -225,6 +218,7 @@ export async function loadPriceData(symbol: string) {
             return newStore;
         });
 
+        return data;
     } catch (error) {
         console.error('Error loading price data:', error);
         priceDataStore.update(store => {
@@ -232,5 +226,6 @@ export async function loadPriceData(symbol: string) {
             newStore.set(symbol, []);
             return newStore;
         });
+        throw error; // Re-throw to handle in component
     }
 }

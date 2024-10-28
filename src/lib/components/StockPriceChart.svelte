@@ -2,7 +2,6 @@
     import { onMount } from 'svelte';
     import { priceDataStore, loadPriceData } from '$lib/stores';
     import type { PriceData, StockChartData, StockChartOptions } from '$lib/types';
-    import type { Tick } from 'chart.js';
     import { Line } from 'svelte-chartjs';
     import {
         Chart as ChartJS,
@@ -13,7 +12,15 @@
         Title,
         Tooltip,
         Legend,
+        TimeScale
     } from 'chart.js';
+    import type { 
+        Scale, 
+        CoreScaleOptions, 
+        Point, 
+        ChartData 
+    } from 'chart.js';
+    import 'chartjs-adapter-date-fns';
 
     ChartJS.register(
         CategoryScale,
@@ -22,11 +29,12 @@
         LineElement,
         Title,
         Tooltip,
-        Legend
+        Legend,
+        TimeScale
     );
 
     export let symbol: string;
-    let data: StockChartData | undefined = undefined;
+    let data: ChartData<'line', Point[], unknown> | undefined = undefined;
     let error: Error | null = null;
 
     const options: StockChartOptions = {
@@ -38,8 +46,13 @@
         },
         scales: {
             x: {
-                type: 'category',
-                display: true,
+                type: 'time',
+                time: {
+                    unit: 'month',
+                    displayFormats: {
+                        month: 'MMM yyyy'
+                    }
+                },
                 grid: {
                     display: true,
                     borderColor: 'transparent'
@@ -49,9 +62,8 @@
                         size: 12
                     },
                     color: '#666',
-                    callback(tickValue: string | number, index: number, ticks: Tick[]) {
-                        return String(tickValue);
-                    }
+                    maxRotation: 45,
+                    minRotation: 45
                 }
             },
             y: {
@@ -65,7 +77,7 @@
                         size: 12
                     },
                     color: '#666',
-                    callback(tickValue: string | number, index: number, ticks: Tick[]) {
+                    callback: function(this: Scale<CoreScaleOptions>, tickValue: string | number) {
                         return `$${Number(tickValue).toFixed(2)}`;
                     }
                 }
@@ -85,8 +97,9 @@
                 cornerRadius: 4,
                 displayColors: false,
                 callbacks: {
-                    label(context) {
-                        return `$${context.parsed.y.toFixed(2)}`;
+                    label: (context) => {
+                        const point = context.raw as Point;
+                        return `$${point.y.toFixed(2)}`;
                     }
                 }
             },
@@ -96,48 +109,49 @@
         }
     };
 
-    $: {
-        const symbolData = $priceDataStore.get(symbol) || [];
-        console.log(`Processing ${symbolData.length} data points for ${symbol}`);
-        
-        if (symbolData.length > 0) {
-            data = {
-                labels: symbolData.map(d => new Date(d.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric'
-                })),
-                datasets: [{
-                    label: `${symbol} Price`,
-                    data: symbolData.map(d => d.price),
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 4
-                }]
-            };
-
-            // Only log if data is defined
-            if (data) {
-                console.log('Chart data prepared:', {
-                    labels: data.labels?.length || 0,
-                    dataPoints: data.datasets[0]?.data?.length || 0
-                });
-            }
-        } else {
-            data = undefined;
-        }
-    }
-    onMount(async () => {
+    async function loadChartData(sym: string) {
         try {
-            if (!$priceDataStore.has(symbol)) {
-                await loadPriceData(symbol);
+            error = null;
+            data = undefined;
+            
+            await loadPriceData(sym);
+            
+            const symbolData = $priceDataStore.get(sym) || [];
+            console.log(`Processing ${symbolData.length} data points for ${sym}`);
+
+            if (symbolData.length > 0) {
+                data = {
+                    datasets: [{
+                        label: `${sym} Price`,
+                        data: symbolData.map(d => ({
+                            x: new Date(d.date).getTime(), // Convert Date to timestamp (number)
+                            y: d.price
+                        })),
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                };
             }
         } catch (e) {
             error = e as Error;
-            console.error('Error loading price data:', e);
+            console.error('Error loading chart data:', e);
+        }
+    }
+
+    $: {
+        if (symbol) {
+            loadChartData(symbol);
+        }
+    }
+
+    onMount(() => {
+        if (symbol) {
+            loadChartData(symbol);
         }
     });
 </script>
@@ -149,9 +163,9 @@
             <div class="h-full flex items-center justify-center text-red-500">
                 Error loading chart: {error.message}
             </div>
-        {:else if !data || !data.datasets[0]?.data?.length}
+        {:else if !data?.datasets[0]?.data?.length}
             <div class="h-full flex items-center justify-center text-gray-500">
-                {$priceDataStore.has(symbol) ? 'No price data available' : 'Loading price data...'}
+                Loading price data...
             </div>
         {:else}
             <Line {data} {options} />
