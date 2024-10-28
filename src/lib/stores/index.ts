@@ -5,7 +5,6 @@ import type { Company, ESGData, PriceData, FilterState } from '$lib/types';
 export const companies = writable<Company[]>([]);
 export const selectedCompany = writable<Company | null>(null);
 export const esgDataStore = writable<ESGData[]>([]);
-export const priceDataStore = writable<PriceData[]>([]);
 
 // Filter state store
 export const filterState = writable<FilterState>({
@@ -19,6 +18,13 @@ export const filterState = writable<FilterState>({
 	sortBy: 'total_esg_score',
 	sortDirection: 'desc'
 });
+// Price data store with type
+export const priceDataStore = writable(new Map<string, PriceData[]>());
+interface RawPriceData {
+    symbol: string;
+    date: string;
+    price: number;
+}
 
 // Helper function to safely parse number
 function safeParseFloat(value: string): number {
@@ -171,4 +177,60 @@ export async function loadCompanyData() {
 		console.error('Error loading company data:', error);
 		companies.set([]);
 	}
+}
+
+// Add this function to load price data
+export async function loadPriceData(symbol: string) {
+    try {
+        console.log('Loading data for symbol:', symbol);
+        const response = await fetch('/processed_sp500_price_data.csv');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const text = await response.text();
+        const rows = text.trim().split('\n');
+        
+        // Get headers to find column index for the symbol
+        const headers = rows[0].split(',');
+        const symbolIndex = headers.findIndex(header => header.trim() === symbol);
+        
+        if (symbolIndex === -1) {
+            console.log(`Symbol ${symbol} not found in CSV headers:`, headers);
+            throw new Error(`No data found for symbol ${symbol}`);
+        }
+
+        console.log(`Found ${symbol} at column index:`, symbolIndex);
+
+        // Parse the data for this symbol
+        const data: PriceData[] = rows
+            .slice(1) // Skip header row
+            .map(row => {
+                const columns = row.split(',');
+                const date = columns[0].trim(); // Date is first column
+                const price = parseFloat(columns[symbolIndex].trim());
+                
+                return { date, price };
+            })
+            .filter(item => !isNaN(item.price));
+
+        console.log(`Processed ${data.length} price points for ${symbol}`);
+        if (data.length > 0) {
+            console.log('Sample data point:', data[0]);
+        }
+
+        priceDataStore.update(store => {
+            const newStore = new Map(store);
+            newStore.set(symbol, data);
+            return newStore;
+        });
+
+    } catch (error) {
+        console.error('Error loading price data:', error);
+        priceDataStore.update(store => {
+            const newStore = new Map(store);
+            newStore.set(symbol, []);
+            return newStore;
+        });
+    }
 }

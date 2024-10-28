@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { selectedCompany } from '$lib/stores';
+	import StockPriceChart from './StockPriceChart.svelte';
 
 	function formatMarketCap(value: number): string {
 		if (!value || isNaN(value)) return '$0.00';
@@ -21,6 +22,7 @@
 
 {#if $selectedCompany}
 	<div class="bg-white p-8 rounded-xl shadow-lg max-w-3xl mx-auto">
+		<!-- Existing company info section -->
 		<div class="flex items-start justify-between mb-6">
 			<div>
 				<h2 class="text-3xl font-bold mb-2 text-gray-900">{$selectedCompany.fullName}</h2>
@@ -35,7 +37,8 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-2 gap-6">
+		<!-- Market Cap and Beta section -->
+		<div class="grid grid-cols-2 gap-6 mb-8">
 			<div class="bg-gray-50 p-6 rounded-lg border border-gray-100">
 				<div class="text-gray-600 text-sm mb-1">Market Cap</div>
 				<div class="text-2xl font-bold text-gray-900">
@@ -48,6 +51,11 @@
 					{formatBeta($selectedCompany.beta)}
 				</div>
 			</div>
+		</div>
+
+		<!-- Stock Price Chart section -->
+		<div class="mt-8">
+			<StockPriceChart symbol={$selectedCompany.symbol} />
 		</div>
 	</div>
 {:else}
