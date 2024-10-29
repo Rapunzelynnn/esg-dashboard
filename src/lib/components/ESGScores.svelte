@@ -1,136 +1,156 @@
 <script lang="ts">
-    export let selectedCompany: {
-        total_esg_score: number;
-        environmental_score: number;
-        environmental_mean: number;
-        environmental_max: number;
-        social_score: number;
-        social_mean: number;
-        social_max: number;
-        governance_score: number;
-        governance_mean: number;
-        governance_max: number;
-        percentile: number;
+    export let esgScores: {
+        total: number;
+        environmental: { score: number; mean: number; max: number };
+        social: { score: number; mean: number; max: number };
+        governance: { score: number; mean: number; max: number };
     };
-	function formatScore(score: number): string {
-        return Number(score).toFixed(1);
+
+    function formatScore(score: number): string {
+        if (!score || isNaN(score)) return '0.0';
+        return score.toFixed(1);
     }
 
-    // Helper function to calculate width percentage
-    function calculateWidth(score: number, max: number = 100): number {
-        return Math.min((score / max) * 100, 100);
+    function getMeanPosition(score: number, max: number): string {
+        if (!score || !max) return '0%';
+        return `${(score / max) * 100}%`;
     }
 </script>
 
-<!-- ESG Scores section -->
-<div class="mt-8">
-    <h3 class="text-xl font-semibold mb-4">ESG Performance</h3>
+<div class="p-6 bg-white rounded-lg">
+    <h2 class="text-3xl font-bold mb-6">ESG Performance</h2>
     
     <!-- Total ESG Score -->
-    <div class="mb-6">
-        <div class="flex justify-between items-baseline mb-2">
-            <span class="text-lg font-medium">Total ESG Score</span>
+    <div class="mb-8">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-xl">Total ESG Score</span>
             <span class="text-2xl font-bold text-green-600">
-                {formatScore(selectedCompany.total_esg_score)}
+                {formatScore(esgScores.total)}
             </span>
         </div>
-        <div class="relative h-3 bg-gray-200 rounded-full">
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div 
-                class="absolute h-full bg-green-500 rounded-full transition-all duration-300"
-                style="width: {calculateWidth(selectedCompany.total_esg_score)}%"
+                class="h-full bg-green-500 rounded-full transition-all duration-300"
+                style="width: {esgScores.total}%"
             />
         </div>
     </div>
 
     <!-- Individual Scores -->
-    <div class="space-y-4">
+    <div class="space-y-6">
         <!-- Environmental Score -->
         <div>
-            <div class="flex justify-between items-baseline mb-2">
-                <span class="text-gray-600">Environmental</span>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-lg text-gray-700">Environmental</span>
                 <div class="flex items-center gap-2">
-                    <span class="text-lg font-semibold">
-                        {formatScore(selectedCompany.environmental_score)}
+                    <span class="text-xl font-semibold">
+                        {formatScore(esgScores.environmental.score)}
                     </span>
                     <span class="text-sm text-gray-500">
-                        Sector Avg: {formatScore(selectedCompany.environmental_mean)}
+                        Mean: {formatScore(esgScores.environmental.mean)} 
+                        Max: {formatScore(esgScores.environmental.max)}
                     </span>
                 </div>
             </div>
-            <div class="relative h-2 bg-gray-200 rounded-full">
+            <div class="relative h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                    class="absolute h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style="width: {calculateWidth(selectedCompany.environmental_score, selectedCompany.environmental_max)}%"
+                    class="absolute h-full bg-blue-500 transition-all duration-300"
+                    style="width: {(esgScores.environmental.score / esgScores.environmental.max) * 100}%"
                 />
-                <div 
-                    class="absolute h-full w-1 bg-gray-500 transform -translate-x-1/2 transition-all duration-300"
-                    style="left: {calculateWidth(selectedCompany.environmental_mean, selectedCompany.environmental_max)}%"
-                />
+                <!-- Mean Marker -->
+                <svg 
+                    class="absolute top-1/2 -translate-y-1/2" 
+                    width="8" 
+                    height="8" 
+                    style="left: {getMeanPosition(esgScores.environmental.mean, esgScores.environmental.max)}"
+                >
+                    <path 
+                        d="M4 0L8 4L4 8L0 4Z" 
+                        fill="currentColor" 
+                        class="text-gray-600"
+                    />
+                </svg>
+            </div>
+            <div class="flex justify-between mt-1 text-xs text-gray-500">
+                <span>0</span>
+                <span>{formatScore(esgScores.environmental.max)}</span>
             </div>
         </div>
 
         <!-- Social Score -->
         <div>
-            <div class="flex justify-between items-baseline mb-2">
-                <span class="text-gray-600">Social</span>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-lg text-gray-700">Social</span>
                 <div class="flex items-center gap-2">
-                    <span class="text-lg font-semibold">
-                        {formatScore(selectedCompany.social_score)}
+                    <span class="text-xl font-semibold">
+                        {formatScore(esgScores.social.score)}
                     </span>
                     <span class="text-sm text-gray-500">
-                        Sector Avg: {formatScore(selectedCompany.social_mean)}
+                        Mean: {formatScore(esgScores.social.mean)} 
+                        Max: {formatScore(esgScores.social.max)}
                     </span>
                 </div>
             </div>
-            <div class="relative h-2 bg-gray-200 rounded-full">
+            <div class="relative h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                    class="absolute h-full bg-purple-500 rounded-full transition-all duration-300"
-                    style="width: {calculateWidth(selectedCompany.social_score, selectedCompany.social_max)}%"
+                    class="absolute h-full bg-purple-500 transition-all duration-300"
+                    style="width: {(esgScores.social.score / esgScores.social.max) * 100}%"
                 />
-                <div 
-                    class="absolute h-full w-1 bg-gray-500 transform -translate-x-1/2 transition-all duration-300"
-                    style="left: {calculateWidth(selectedCompany.social_mean, selectedCompany.social_max)}%"
-                />
+                <svg 
+                    class="absolute top-1/2 -translate-y-1/2" 
+                    width="8" 
+                    height="8" 
+                    style="left: {getMeanPosition(esgScores.social.mean, esgScores.social.max)}"
+                >
+                    <path 
+                        d="M4 0L8 4L4 8L0 4Z" 
+                        fill="currentColor" 
+                        class="text-gray-600"
+                    />
+                </svg>
+            </div>
+            <div class="flex justify-between mt-1 text-xs text-gray-500">
+                <span>0</span>
+                <span>{formatScore(esgScores.social.max)}</span>
             </div>
         </div>
 
         <!-- Governance Score -->
         <div>
-            <div class="flex justify-between items-baseline mb-2">
-                <span class="text-gray-600">Governance</span>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-lg text-gray-700">Governance</span>
                 <div class="flex items-center gap-2">
-                    <span class="text-lg font-semibold">
-                        {formatScore(selectedCompany.governance_score)}
+                    <span class="text-xl font-semibold">
+                        {formatScore(esgScores.governance.score)}
                     </span>
                     <span class="text-sm text-gray-500">
-                        Sector Avg: {formatScore(selectedCompany.governance_mean)}
+                        Mean: {formatScore(esgScores.governance.mean)} 
+                        Max: {formatScore(esgScores.governance.max)}
                     </span>
                 </div>
             </div>
-            <div class="relative h-2 bg-gray-200 rounded-full">
+            <div class="relative h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                    class="absolute h-full bg-orange-500 rounded-full transition-all duration-300"
-                    style="width: {calculateWidth(selectedCompany.governance_score, selectedCompany.governance_max)}%"
+                    class="absolute h-full bg-orange-500 transition-all duration-300"
+                    style="width: {(esgScores.governance.score / esgScores.governance.max) * 100}%"
                 />
-                <div 
-                    class="absolute h-full w-1 bg-gray-500 transform -translate-x-1/2 transition-all duration-300"
-                    style="left: {calculateWidth(selectedCompany.governance_mean, selectedCompany.governance_max)}%"
-                />
+                <svg 
+                    class="absolute top-1/2 -translate-y-1/2" 
+                    width="8" 
+                    height="8" 
+                    style="left: {getMeanPosition(esgScores.governance.mean, esgScores.governance.max)}"
+                >
+                    <path 
+                        d="M4 0L8 4L4 8L0 4Z" 
+                        fill="currentColor" 
+                        class="text-gray-600"
+                    />
+                </svg>
             </div>
-        </div>
-    </div>
-
-    <!-- Percentile Ranking -->
-    <div class="mt-6">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-gray-600">ESG Percentile Ranking</span>
-            <span class="text-lg font-semibold">{selectedCompany.percentile}%</span>
-        </div>
-        <div class="relative h-2 bg-gray-200 rounded-full">
-            <div 
-                class="absolute h-full bg-green-500 rounded-full transition-all duration-300"
-                style="width: {selectedCompany.percentile}%"
-            />
+            <div class="flex justify-between mt-1 text-xs text-gray-500">
+                <span>0</span>
+                <span>{formatScore(esgScores.governance.max)}</span>
+            </div>
         </div>
     </div>
 </div>
