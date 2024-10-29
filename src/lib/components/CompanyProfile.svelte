@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { ESGData } from '$lib/types';
     import { selectedCompany } from '$lib/stores';
     import StockPriceChart from './StockPriceChart.svelte';
     import ESGScores from './ESGScores.svelte';
@@ -62,9 +61,9 @@
 						{$selectedCompany?.industryCode || 'No Code'} - {$selectedCompany?.industryName || 'No Industry'} <!-- Added fallbacks -->
 					</div>
 					<!-- Add debug info temporarily -->
-					<div class="text-sm text-red-500">
+					<!-- <div class="text-sm text-red-500">
 						Debug: {JSON.stringify($selectedCompany, null, 2)}
-					</div>
+					</div> -->
 				</div>
 			</div>
 			<div class="text-xl font-semibold text-blue-600">

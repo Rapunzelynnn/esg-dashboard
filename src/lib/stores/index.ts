@@ -1,10 +1,9 @@
 import { writable } from 'svelte/store';
-import type { Company, ESGData, PriceData, FilterState } from '$lib/types';
+import type { Company, PriceData, FilterState } from '$lib/types';
 
 // Stores
 export const companies = writable<Company[]>([]);
 export const selectedCompany = writable<Company | null>(null);
-export const esgDataStore = writable<ESGData[]>([]);
 
 // Add this debug logging
 $: console.log('Selected Company Data:', selectedCompany);

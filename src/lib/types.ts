@@ -11,34 +11,6 @@ import type {
     TimeScaleTimeOptions
 } from 'chart.js';
 
-export interface ESGData {
-    symbol: string;
-    fullName: string;
-    gicsSector: string;
-    gicsSubIndustry: string;
-    industry_code: string;
-    industry_name: string;
-    data_availability: string;
-    location: string;
-    total_esg_score: number;
-    environmental_score: number;
-    environmental_mean: number;
-    environmental_max: number;
-    social_score: number;
-    social_mean: number;
-    social_max: number;
-    governance_score: number;
-    governance_mean: number;
-    governance_max: number;
-    percentile: number;
-    ratingYear: number;
-    ratingMonth: number;
-    marketCap: number;
-    beta: number;
-    overallRisk: number;
-    processed: boolean;
-}
-
 export interface Company {
     symbol: string;
     fullName: string;
