@@ -6,6 +6,10 @@ export const companies = writable<Company[]>([]);
 export const selectedCompany = writable<Company | null>(null);
 export const esgDataStore = writable<ESGData[]>([]);
 
+// Add this debug logging
+$: console.log('Selected Company Data:', selectedCompany);
+
+
 // Filter state store
 export const filterState = writable<FilterState>({
 	timeRange: [new Date(new Date().getFullYear() - 1), new Date()],
@@ -26,132 +30,130 @@ interface RawPriceData {
     price: number;
 }
 
-// Helper function to safely parse number
+// Helper function to safely parse float values
 function safeParseFloat(value: string): number {
-	const parsed = parseFloat(value);
-	return isNaN(parsed) ? 0 : parsed;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
 }
 // Helper function to clean company names
 function cleanCompanyName(name: string): string {
-	if (!name) return '';
-	return name
-		.trim()
-		.replace(/\s+/g, ' ')
-		.replace(/\s*,\s*/g, ', ')
-		.replace(/\s*\.\s*/g, '.')
-		.replace(/Inc$/, 'Inc.')
-		.replace(/Corp$/, 'Corp.')
-		.replace(/\s+Inc\.$/, ' Inc.')
-		.replace(/\s+Corp\.$/, ' Corp.');
+    if (!name) return '';
+    return name
+        .trim()
+        .replace(/\*\*/g, '') // Remove ** markers
+        .replace(/\s+/g, ' ')
+        .replace(/\s*,\s*/g, ', ')
+        .replace(/\s*\.\s*/g, '.')
+        .replace(/Inc$/, 'Inc.')
+        .replace(/Corp$/, 'Corp.')
+        .replace(/\s+Inc\.$/, ' Inc.')
+        .replace(/\s+Corp\.$/, ' Corp.');
 }
-
 // CSV parsing function
 export function parseCSV(csvText: string): Company[] {
-	try {
-		// Split by lines and remove empty lines
-		const lines = csvText.split('\n').filter((line) => line.trim());
+    try {
+        // Split by lines and remove empty lines and remove "**" markers
+        const lines = csvText.split('\n')
+            .filter((line) => line.trim())
+            .map(line => line.replace(/\*\*/g, ''));
+        
+        // Get and validate headers
+        const headerRow = lines[0].split(',').map((h) => h.trim());
+        
+        console.log('Original headers:', headerRow); // Debug log
 
-		// Get and validate headers
-		const headerRow = lines[0].split(',').map((h) => h.trim());
-		const requiredHeaders = [
-			'symbol',
-			'fullName',
-			'industryCode',
-			'industryName',
-			'location',
-			'esgScore',
-			'environmentalScore',
-			'socialScore',
-			'governanceScore',
-			'marketCap',
-			'beta'
-		];
+        const headerIndexMap = new Map<string, number>();
+        headerRow.forEach((header, index) => {
+            // Clean up header name
+            const cleanHeader = header
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, '')
+                .trim();
+            headerIndexMap.set(cleanHeader, index);
+        });
 
-		// Validate that all required headers are present
-		const headerIndexMap = new Map<string, number>();
-		requiredHeaders.forEach((reqHeader) => {
-			const index = headerRow.findIndex(
-				(h) => h.toLowerCase().replace(/[^a-z0-9]/g, '') === reqHeader.toLowerCase()
-			);
-			if (index !== -1) {
-				headerIndexMap.set(reqHeader, index);
-			}
-		});
+        console.log('Header mapping:', Object.fromEntries(headerIndexMap)); // Debug log
 
-		// Process data lines
-		return lines
-			.slice(1)
-			.map((line, index) => {
-				try {
-					// Handle quoted values properly
-					const values: string[] = [];
-					let currentValue = '';
-					let insideQuotes = false;
+        // Process data lines
+        return lines
+            .slice(1)
+            .map((line, lineIndex) => {
+                try {
+                    // Handle quoted values properly
+                    const values: string[] = [];
+                    let currentValue = '';
+                    let insideQuotes = false;
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            insideQuotes = !insideQuotes;
+                        } else if (char === ',' && !insideQuotes) {
+                            values.push(currentValue.trim().replace(/^"|"$/g, ''));
+                            currentValue = '';
+                        } else {
+                            currentValue += char;
+                        }
+                    }
+                    values.push(currentValue.trim().replace(/^"|"$/g, '')); // Push the last value
 
-					for (let i = 0; i < line.length; i++) {
-						const char = line[i];
+                    // Get values using header map
+                    const getValue = (header: string): string => {
+                        const index = headerIndexMap.get(header.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                        const value = index !== undefined && index < values.length ? values[index] : '';
+                        if (!value && lineIndex === 0) {
+                            console.warn(`No value found for header: ${header}`);
+                        }
+                        return value;
+                    };
 
-						if (char === '"') {
-							insideQuotes = !insideQuotes;
-						} else if (char === ',' && !insideQuotes) {
-							values.push(currentValue.trim().replace(/^"|"$/g, ''));
-							currentValue = '';
-						} else {
-							currentValue += char;
-						}
-					}
-					values.push(currentValue.trim().replace(/^"|"$/g, '')); // Push the last value
+                    // Create company object
+                    const company: Company = {
+                        symbol: getValue('symbol'),
+						fullName: cleanCompanyName(getValue('Full Name')),		
+                        industryCode: getValue('industry_code'),
+                        industryName: getValue('industry_name'),
+                        location: getValue('location'),
+                        marketCap: safeParseFloat(getValue('marketcap')),
+                        beta: safeParseFloat(getValue('beta')),
+                        esgScores: {
+                            total: safeParseFloat(getValue('total_esg_score')),
+                            environmental: {
+                                score: safeParseFloat(getValue('environmental_score')),
+                                mean: safeParseFloat(getValue('environmental_mean')),
+                                max: safeParseFloat(getValue('environmental_max'))
+                            },
+                            social: {
+                                score: safeParseFloat(getValue('social_score')),
+                                mean: safeParseFloat(getValue('social_mean')),
+                                max: safeParseFloat(getValue('social_max'))
+                            },
+                            governance: {
+                                score: safeParseFloat(getValue('governance_score')),
+                                mean: safeParseFloat(getValue('governance_mean')),
+                                max: safeParseFloat(getValue('governance_max'))
+                            }
+                        }
+                    };
 
-					// Get values using header map
-					const getValue = (header: string): string => {
-						const index = headerIndexMap.get(header);
-						return index !== undefined && index < values.length ? values[index] : '';
-					};
+                    // Debug log for first few companies
+                    if (lineIndex < 3) {
+                        console.log(`Parsed company ${lineIndex + 1}:`, company);
+                    }
 
-					// Create company object
-					const company: Company = {
-						symbol: getValue('symbol'),
-						fullName: cleanCompanyName(getValue('fullName') || `${getValue('symbol')} Inc.`),
-						industryCode: getValue('industryCode'),
-						industryName: getValue('industryName'),
-						location: getValue('location'),
-						marketCap: safeParseFloat(getValue('marketCap')),
-						beta: safeParseFloat(getValue('beta')),
-						esgScores: {
-							total: safeParseFloat(getValue('esgScore')),
-							environmental: {
-								score: safeParseFloat(getValue('environmentalScore')),
-								mean: safeParseFloat(getValue('environmentalMean')),
-								max: safeParseFloat(getValue('environmentalMax'))
-							},
-							social: {
-								score: safeParseFloat(getValue('socialScore')),
-								mean: safeParseFloat(getValue('socialMean')),
-								max: safeParseFloat(getValue('socialMax'))
-							},
-							governance: {
-								score: safeParseFloat(getValue('governanceScore')),
-								mean: safeParseFloat(getValue('governanceMean')),
-								max: safeParseFloat(getValue('governanceMax'))
-							},
-							percentile: safeParseFloat(getValue('percentile')),
-							ratingYear: safeParseFloat(getValue('ratingYear')),
-							ratingMonth: safeParseFloat(getValue('ratingMonth'))
-						}
-					};
-
-					return company;
-				} catch (error) {
-					console.warn(`Error parsing line ${index + 2}:`, error);
-					return null;
-				}
-			})
-			.filter((company): company is Company => company !== null); // Remove null entries
-	} catch (error) {
-		console.error('Error parsing CSV:', error);
-		return [];
-	}
+                    return company;
+                } catch (error) {
+                    console.warn(`Error parsing line ${lineIndex + 2}:`, error);
+                    return null;
+                }
+            })
+            .filter((company): company is Company => company !== null);
+    } catch (error) {
+        console.error('Error parsing CSV:', error);
+        return [];
+    }
 }
+
 
 // Data loading function
 export async function loadCompanyData() {

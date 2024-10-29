@@ -11,8 +11,6 @@ import type {
     TimeScaleTimeOptions
 } from 'chart.js';
 
-// Remove Recharts declarations since we're using Chart.js
-// Keep your existing interfaces
 export interface ESGData {
     symbol: string;
     fullName: string;
@@ -66,9 +64,6 @@ export interface Company {
             mean: number;
             max: number;
         };
-        percentile: number;
-        ratingYear: number;
-        ratingMonth: number;
     };
 }
 
