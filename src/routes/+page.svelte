@@ -9,14 +9,8 @@
   });
 </script>
 
-<div class="min-h-screen bg-gray-50 py-8">
-  <div class="max-w-7xl mx-auto px-4">
-    <h1 class="text-3xl font-bold mb-8 text-gray-800 text-center">Company Profile</h1>
-    
-    <div class="mb-8 max-w-xl mx-auto">
-      <CompanySearch />
-    </div>
-
-    <CompanyProfile />
-  </div>
+<h1 class="text-3xl font-bold mb-8 text-gray-800">Company Profile</h1>
+<div class="mb-8 max-w-xl">
+  <CompanySearch />
 </div>
+<CompanyProfile />
