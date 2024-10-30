@@ -1,21 +1,41 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadCompanyData } from '$lib/stores';
-
+  import { loadCompanyData, companies } from '$lib/stores';
+  import ESGIndustryAnalysis from '$lib/components/ESGIndustryAnalysis.svelte';
+  import type { Company } from '$lib/types';
+  
+  let loading = true;
+  
   onMount(async () => {
-    await loadCompanyData();
+    try {
+      await loadCompanyData();
+    } catch (error) {
+      console.error('Error loading company data:', error);
+    } finally {
+      loading = false;
+    }
   });
 </script>
 
-<h1 class="text-3xl font-bold mb-8 text-gray-800">S&P 500 ESG Analysis</h1>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div class="bg-white p-6 rounded-lg shadow-sm">
-    <h2 class="text-xl font-semibold mb-4">ESG Score Distribution</h2>
-    <!-- Add visualization component here -->
-  </div>
+<div class="max-w-7xl mx-auto">
+  <h1 class="text-3xl font-bold mb-8 text-gray-800">Overall Analysis</h1>
   
-  <div class="bg-white p-6 rounded-lg shadow-sm">
-    <h2 class="text-xl font-semibold mb-4">Sector Analysis</h2>
-    <!-- Add visualization component here -->
+  <div class="mb-8">
+    {#if loading}
+      <div class="text-center p-4">
+        <p class="text-gray-600">Loading data...</p>
+      </div>
+    {:else if $companies.length > 0}
+      <ESGIndustryAnalysis data={$companies} />
+    {:else}
+      <div class="text-center p-4">
+        <p class="text-gray-600">No company data available</p>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Placeholder for future visualizations -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- We'll add more visualization components here later -->
   </div>
 </div>
