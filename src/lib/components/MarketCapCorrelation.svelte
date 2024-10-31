@@ -71,7 +71,7 @@ function handlePointClick(company: Company) {
 <div class="w-full space-y-4">
   <!-- Header and Controls -->
   <div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 items-start">
-    <!-- <h2 class="text-xl font-semibold">ESG Score vs Market Cap</h2> -->
+    <h2 class="text-xl font-semibold">ESG Score vs Market Cap</h2>
     
     <!-- Search and Filters -->
     <div class="flex-1 w-full sm:w-auto">
