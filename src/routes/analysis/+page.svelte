@@ -6,17 +6,59 @@
   import MarketCapCorrelation from '$lib/components/MarketCapCorrelation.svelte';
   import ScoreComparison from '$lib/components/ScoreComparison.svelte';
   import StockPriceCorrelation from '$lib/components/StockPriceCorrelation.svelte';
-  import type { Company } from '$lib/types';
+  import type { Company, PriceData } from '$lib/types';
 
   let loading = true;
   let selectedChart: number | null = null;
   let modalOpen = false;
+  let processedPriceData: Record<string, PriceData[]> = {};
+
+  // Function to process CSV data
+  async function loadPriceData() {
+    try {
+      const response = await fetch('/processed_sp500_price_data.csv');
+      const csvData = await response.text();
+      
+      // Get headers (symbols) from first row
+      const [headerRow, ...dataRows] = csvData.split('\n');
+      const symbols = headerRow.split(',').slice(1); // Skip 'Date' column
+      
+      // Process each row
+      dataRows.forEach(row => {
+        if (!row.trim()) return; // Skip empty rows
+        
+        const [date, ...prices] = row.split(',');
+        prices.forEach((price, index) => {
+          const symbol = symbols[index];
+          if (!symbol || !price) return;
+          
+          if (!processedPriceData[symbol]) {
+            processedPriceData[symbol] = [];
+          }
+          
+          const numPrice = parseFloat(price);
+          if (!isNaN(numPrice)) {
+            processedPriceData[symbol].push({
+              date,
+              price: numPrice
+            });
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error loading price data:', error);
+    }
+  }
 
   onMount(async () => {
     try {
-      await loadCompanyData();
+      // Load both data sets concurrently
+      await Promise.all([
+        loadCompanyData(),
+        loadPriceData()
+      ]);
     } catch (error) {
-      console.error('Error loading company data:', error);
+      console.error('Error loading data:', error);
     } finally {
       loading = false;
     }
@@ -31,17 +73,28 @@
     modalOpen = false;
     selectedChart = null;
   }
+
+  // Helper function to get chart title
+  function getChartTitle(index: number | null): string {
+    if (index === null) return '';
+    
+    switch (index) {
+      case 0: return 'ESG Score Breakdown by Industry';
+      case 1: return 'ESG Score vs Market Cap';
+      case 2: return 'ESG Score Comparison';
+      case 3: return 'ESG vs. Stock Price';
+      default: return '';
+    }
+  }
 </script>
 
 <!-- Modal for zoomed chart -->
 {#if modalOpen && !loading && $companies.length > 0}
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-8 w-[95%] h-[90%]"> <!-- Increased size -->
+    <div class="bg-white rounded-lg p-8 w-[95%] h-[90%]">
       <div class="flex justify-between mb-6">
         <h2 class="text-xl font-semibold">
-          {selectedChart === 0 ? 'ESG Score Breakdown by Industry' : 
-           selectedChart === 1 ? 'ESG Score vs Market Cap' : 
-           selectedChart === 2 ? 'ESG Score Comparison' : 'ESG vs. Stock Price'}
+          {getChartTitle(selectedChart)}
         </h2>
         <button 
           class="text-gray-500 hover:text-gray-700 text-xl"
@@ -50,7 +103,7 @@
           ×
         </button>
       </div>
-      <div class="h-[calc(100%-4rem)]"> <!-- Adjusted height to account for header -->
+      <div class="h-[calc(100%-4rem)]">
         {#if selectedChart === 0}
           <ESGIndustryAnalysis data={$companies} expanded={true} />
         {:else if selectedChart === 1}
@@ -58,32 +111,37 @@
         {:else if selectedChart === 2}
           <ScoreComparison data={$companies} expanded={true} />
         {:else if selectedChart === 3}
-          <StockPriceCorrelation data={$companies} expanded={true} />
+          <StockPriceCorrelation 
+            data={$companies} 
+            priceData={processedPriceData}
+            expanded={true} 
+          />
         {/if}
       </div>
     </div>
   </div>
 {/if}
 
-<!-- In your +page.svelte -->
-<div class="max-w-[95%] mx-auto"> <!-- Changed from max-w-7xl to use more screen width -->
+<div class="max-w-[95%] mx-auto">
   <h1 class="text-3xl font-bold mb-8 text-gray-800">Overall Analysis</h1>
   
   {#if loading}
-    <!-- Loading state remains the same -->
+    <div class="flex justify-center items-center h-64">
+      <div class="text-gray-600">Loading data...</div>
+    </div>
   {:else if $companies.length > 0}
-    <div class="space-y-8"> <!-- Increased spacing between rows -->
+    <div class="space-y-8">
       <!-- First row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8"> <!-- Increased gap -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Industry Analysis Chart -->
-        <Card class="col-span-1 relative min-h-[400px]"> <!-- Added min-height -->
+        <Card class="col-span-1 relative min-h-[400px]">
           <button 
             class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
             on:click={() => openModal(0)}
           >
             🔍
           </button>
-          <div class="p-8 h-full"> <!-- Increased padding -->
+          <div class="p-8 h-full">
             <ESGIndustryAnalysis data={$companies} />
           </div>
         </Card>
@@ -126,7 +184,10 @@
             🔍
           </button>
           <div class="p-8 h-full">
-            <StockPriceCorrelation data={$companies} />
+            <StockPriceCorrelation 
+              data={$companies} 
+              priceData={processedPriceData}
+            />
           </div>
         </Card>
       </div>
