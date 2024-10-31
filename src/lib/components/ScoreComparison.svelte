@@ -60,6 +60,30 @@ function getRelativeScore(score: number, mean: number): number {
 function formatScore(value: number, isRelative = false): string {
   return isRelative ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%` : value.toFixed(1);
 }
+
+// Add tick mark calculations
+$: xAxisTicks = selectedMetric === 'absolute' 
+  ? [0, 20, 40, 60, 80, 100]
+  : [-50, -25, 0, 25, 50];
+
+$: yAxisTicks = selectedMetric === 'absolute'
+  ? [0, 20, 40, 60, 80, 100]
+  : [-50, -25, 0, 25, 50];
+
+function getTickPosition(tick: number): string {
+  if (selectedMetric === 'absolute') {
+    return `${tick}%`;
+  } else {
+    return `${tick + 50}%`; // Shift the -50 to +50 range to 0 to 100
+  }
+}
+
+function getTickLabel(tick: number): string {
+  if (selectedMetric === 'relative') {
+    return tick > 0 ? `+${tick}%` : `${tick}%`;
+  }
+  return tick.toString();
+}
 </script>
 
 <div class="w-full space-y-4">
@@ -122,16 +146,34 @@ function formatScore(value: number, isRelative = false): string {
     <div class="absolute inset-0">
       <!-- Axes and Grid -->
       <div class="absolute inset-x-16 inset-y-8 border-l border-b border-gray-200">
-        <!-- Grid lines -->
-        {#each Array(5) as _, i}
+        <!-- Y-axis ticks and labels -->
+        {#each yAxisTicks as tick}
           <div
-            class="absolute w-full border-t border-gray-100"
-            style="bottom: {i * 25}%"
-          />
+            class="absolute left-0 w-full h-0 flex items-center"
+            style="bottom: {getTickPosition(tick)}"
+          >
+            <!-- Tick label -->
+            <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
+              {getTickLabel(tick)}
+            </div>
+            <!-- Grid line -->
+            <div class="w-full border-t border-gray-100" />
+          </div>
+        {/each}
+
+        <!-- X-axis ticks and labels -->
+        {#each xAxisTicks as tick}
           <div
-            class="absolute h-full border-l border-gray-100"
-            style="left: {i * 25}%"
-          />
+            class="absolute bottom-0 h-full w-0 flex justify-center"
+            style="left: {getTickPosition(tick)}"
+          >
+            <!-- Tick label -->
+            <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
+              {getTickLabel(tick)}
+            </div>
+            <!-- Grid line -->
+            <div class="h-full border-l border-gray-100" />
+          </div>
         {/each}
         
         <!-- Data points -->
@@ -211,16 +253,34 @@ function formatScore(value: number, isRelative = false): string {
           </button>
         {/each}
       </div>
-
-      <!-- Axis Labels -->
-      <div class="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-600">
-        {selectedMetric === 'absolute' ? 'Environmental Score' : 'Environmental Score (vs Industry Average)'}
+      <!-- Enhanced Axis Labels -->
+      <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center">
+        <div class="h-16"></div> <!-- Spacer for tick labels -->
+        <div class="text-sm text-gray-600 font-medium">
+          {#if selectedMetric === 'absolute'}
+            Environmental Score
+          {:else}
+            Environmental Score (% vs Industry Average)
+          {/if}
+        </div>
+    </div>
+    <div class="absolute left-2 top-1/2 -rotate-90 text-sm text-gray-600 font-medium whitespace-nowrap">
+      {#if selectedMetric === 'absolute'}
+        Social Score
+      {:else}
+        Social Score (% vs Industry Average)
+      {/if}
+    </div>
+    <!-- Legend for Governance Score -->
+    <div class="absolute right-4 top-4 bg-white/80 p-2 rounded-lg shadow-sm">
+      <div class="text-sm text-gray-600 font-medium">Bubble Size</div>
+      <div class="text-xs text-gray-500">= Governance Score</div>
+      <div class="flex items-center mt-1 space-x-2">
+        <div class="w-2 h-2 rounded-full bg-gray-400"></div>
+        <span class="text-xs">Low</span>
+        <div class="w-4 h-4 rounded-full bg-gray-400"></div>
+        <span class="text-xs">High</span>
       </div>
-      <div class="absolute left-2 top-1/2 -rotate-90 text-sm text-gray-600 whitespace-nowrap">
-        {selectedMetric === 'absolute' ? 'Social Score' : 'Social Score (vs Industry Average)'}
-      </div>
-      <div class="absolute right-0 top-1/2 text-sm text-gray-600 whitespace-nowrap">
-        Bubble Size = Governance Score
       </div>
     </div>
   </div>
