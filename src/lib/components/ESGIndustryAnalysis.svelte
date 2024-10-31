@@ -2,6 +2,7 @@
   import type { Company } from '$lib/types';
 
   export let data: Company[] = [];
+  export let expanded = false;  // Add this line
 
   interface IndustryData {
     industryName: string;
@@ -115,7 +116,7 @@
     }
   }
 
-  const chartHeight = 320;
+  let chartHeight = 320;
   const maxScore = 100;
 
   function getHeight(value: number): string {
@@ -144,6 +145,7 @@
     
     return lines.join('\n');
   }
+  $: chartHeight = expanded ? 500 : 320;
 </script>
 
 <svelte:window on:click={handleClickOutside} />
