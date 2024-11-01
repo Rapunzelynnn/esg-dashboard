@@ -1,3 +1,4 @@
+<!-- $lib/routes/analysis/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { loadCompanyData, companies } from '$lib/stores';
@@ -9,23 +10,26 @@
   import type { Company, PriceData } from '$lib/types';
 
   let loading = true;
-  let selectedChart: number | null = null;
-  let modalOpen = false;
   let processedPriceData: Record<string, PriceData[]> = {};
+  let activeChart = 0; // Track which chart is currently displayed
 
-  // Function to process CSV data
+  const charts = [
+    { id: 0, title: 'ESG Score Breakdown by Industry', icon: '📊' },
+    { id: 1, title: 'ESG Score vs Market Cap', icon: '💰' },
+    { id: 2, title: 'ESG Score Comparison', icon: '📈' },
+    { id: 3, title: 'ESG vs. Stock Price', icon: '📉' }
+  ];
+
   async function loadPriceData() {
     try {
       const response = await fetch('/processed_sp500_price_data.csv');
       const csvData = await response.text();
       
-      // Get headers (symbols) from first row
       const [headerRow, ...dataRows] = csvData.split('\n');
-      const symbols = headerRow.split(',').slice(1); // Skip 'Date' column
+      const symbols = headerRow.split(',').slice(1);
       
-      // Process each row
       dataRows.forEach(row => {
-        if (!row.trim()) return; // Skip empty rows
+        if (!row.trim()) return;
         
         const [date, ...prices] = row.split(',');
         prices.forEach((price, index) => {
@@ -52,7 +56,6 @@
 
   onMount(async () => {
     try {
-      // Load both data sets concurrently
       await Promise.all([
         loadCompanyData(),
         loadPriceData()
@@ -63,138 +66,58 @@
       loading = false;
     }
   });
-
-  function openModal(chartIndex: number) {
-    selectedChart = chartIndex;
-    modalOpen = true;
-  }
-
-  function closeModal() {
-    modalOpen = false;
-    selectedChart = null;
-  }
-
-  // Helper function to get chart title
-  function getChartTitle(index: number | null): string {
-    if (index === null) return '';
-    
-    switch (index) {
-      case 0: return 'ESG Score Breakdown by Industry';
-      case 1: return 'ESG Score vs Market Cap';
-      case 2: return 'ESG Score Comparison';
-      case 3: return 'ESG vs. Stock Price';
-      default: return '';
-    }
-  }
 </script>
 
-<!-- Modal for zoomed chart -->
-{#if modalOpen && !loading && $companies.length > 0}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-8 w-[95%] h-[90%]">
-      <div class="flex justify-between mb-6">
-        <h2 class="text-xl font-semibold">
-          {getChartTitle(selectedChart)}
-        </h2>
-        <button 
-          class="text-gray-500 hover:text-gray-700 text-xl"
-          on:click={closeModal}
+<div class="max-w-[95%] mx-auto">
+  <!-- Reserved space for Company Profile -->
+  <div class="mb-8 bg-white rounded-lg shadow-sm p-6 min-h-[200px]">
+    <p class="text-gray-400 text-center">Company Profile Section (Coming Soon)</p>
+  </div>
+
+  <!-- Analysis Section -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4 text-gray-800">Overall Analysis</h1>
+    
+    <!-- Chart Navigation -->
+    <div class="flex space-x-2 mb-6 overflow-x-auto pb-2">
+      {#each charts as chart}
+        <button
+          class="px-4 py-2 rounded-lg flex items-center space-x-2 whitespace-nowrap
+                 {activeChart === chart.id ? 
+                   'bg-blue-500 text-white' : 
+                   'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
+          on:click={() => activeChart = chart.id}
         >
-          ×
+          <span>{chart.icon}</span>
+          <span>{chart.title}</span>
         </button>
+      {/each}
+    </div>
+
+    {#if loading}
+      <div class="flex justify-center items-center h-64">
+        <div class="text-gray-600">Loading data...</div>
       </div>
-      <div class="h-[calc(100%-4rem)]">
-        {#if selectedChart === 0}
+    {:else if $companies.length > 0}
+      <Card class="min-h-[600px] p-8">
+        {#if activeChart === 0}
           <ESGIndustryAnalysis data={$companies} expanded={true} />
-        {:else if selectedChart === 1}
+        {:else if activeChart === 1}
           <MarketCapCorrelation data={$companies} expanded={true} />
-        {:else if selectedChart === 2}
+        {:else if activeChart === 2}
           <ScoreComparison data={$companies} expanded={true} />
-        {:else if selectedChart === 3}
+        {:else if activeChart === 3}
           <StockPriceCorrelation 
             data={$companies} 
             priceData={processedPriceData}
             expanded={true} 
           />
         {/if}
+      </Card>
+    {:else}
+      <div class="text-center p-4">
+        <p class="text-gray-600">No company data available</p>
       </div>
-    </div>
+    {/if}
   </div>
-{/if}
-
-<div class="max-w-[95%] mx-auto">
-  <h1 class="text-3xl font-bold mb-8 text-gray-800">Overall Analysis</h1>
-  
-  {#if loading}
-    <div class="flex justify-center items-center h-64">
-      <div class="text-gray-600">Loading data...</div>
-    </div>
-  {:else if $companies.length > 0}
-    <div class="space-y-8">
-      <!-- First row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Industry Analysis Chart -->
-        <Card class="col-span-1 relative min-h-[400px]">
-          <button 
-            class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-            on:click={() => openModal(0)}
-          >
-            🔍
-          </button>
-          <div class="p-8 h-full">
-            <ESGIndustryAnalysis data={$companies} />
-          </div>
-        </Card>
-
-        <!-- Market Cap Correlation Chart -->
-        <Card class="col-span-1 relative min-h-[400px]">
-          <button 
-            class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-            on:click={() => openModal(1)}
-          >
-            🔍
-          </button>
-          <div class="p-8 h-full">
-            <MarketCapCorrelation data={$companies} />
-          </div>
-        </Card>
-      </div>
-
-      <!-- Second row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- ESG Score Comparison -->
-        <Card class="col-span-1 relative min-h-[400px]">
-          <button 
-            class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-            on:click={() => openModal(2)}
-          >
-            🔍
-          </button>
-          <div class="p-8 h-full">
-            <ScoreComparison data={$companies} />
-          </div>
-        </Card>
-
-        <!-- Stock Price Correlation -->
-        <Card class="col-span-1 relative min-h-[400px]">
-          <button 
-            class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-            on:click={() => openModal(3)}
-          >
-            🔍
-          </button>
-          <div class="p-8 h-full">
-            <StockPriceCorrelation 
-              data={$companies} 
-              priceData={processedPriceData}
-            />
-          </div>
-        </Card>
-      </div>
-    </div>
-  {:else}
-    <div class="text-center p-4">
-      <p class="text-gray-600">No company data available</p>
-    </div>
-  {/if}
 </div>
