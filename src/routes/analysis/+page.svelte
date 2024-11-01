@@ -3,6 +3,8 @@
   import { onMount } from 'svelte';
   import { loadCompanyData, companies } from '$lib/stores';
   import { Card } from '$lib/components/ui/card';
+  import CompanySearch from '$lib/components/CompanySearch.svelte';
+  import CompanyProfile from '$lib/components/CompanyProfile.svelte';
   import ESGIndustryAnalysis from '$lib/components/ESGIndustryAnalysis.svelte';
   import MarketCapCorrelation from '$lib/components/MarketCapCorrelation.svelte';
   import ScoreComparison from '$lib/components/ScoreComparison.svelte';
@@ -11,7 +13,7 @@
 
   let loading = true;
   let processedPriceData: Record<string, PriceData[]> = {};
-  let activeChart = 0; // Track which chart is currently displayed
+  let activeChart = 0;
 
   const charts = [
     { id: 0, title: 'ESG Score Breakdown by Industry', icon: '📊' },
@@ -69,14 +71,20 @@
 </script>
 
 <div class="max-w-[95%] mx-auto">
-  <!-- Reserved space for Company Profile -->
-  <div class="mb-8 bg-white rounded-lg shadow-sm p-6 min-h-[200px]">
-    <p class="text-gray-400 text-center">Company Profile Section (Coming Soon)</p>
+  <!-- Company Profile Section -->
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">Company Profile</h1>
+      <div class="w-96">
+        <CompanySearch />
+      </div>
+    </div>
+    <CompanyProfile />
   </div>
 
   <!-- Analysis Section -->
   <div class="mb-8">
-    <h1 class="text-3xl font-bold mb-4 text-gray-800">Overall Analysis</h1>
+    <h2 class="text-3xl font-bold mb-4 text-gray-800">Overall Analysis</h2>
     
     <!-- Chart Navigation -->
     <div class="flex space-x-2 mb-6 overflow-x-auto pb-2">

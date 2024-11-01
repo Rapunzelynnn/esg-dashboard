@@ -1,3 +1,4 @@
+<!-- $lib/components/StockPriceChart.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
     import { priceDataStore, loadPriceData } from '$lib/stores';
@@ -156,9 +157,9 @@
     });
 </script>
 
-<div class="bg-white p-6 rounded-xl border border-gray-100">
+<div class="bg-white rounded-lg">
     <h3 class="text-lg font-semibold mb-4">Stock Price Trend (2023)</h3>
-    <div class="h-64 w-full">
+    <div class="h-48"> <!-- Adjusted height to fit better in the layout -->
         {#if error}
             <div class="h-full flex items-center justify-center text-red-500">
                 Error loading chart: {error.message}

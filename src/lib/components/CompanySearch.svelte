@@ -1,3 +1,4 @@
+<!-- $lib/components/CompanySearch -->
 <script lang="ts">
 	import { companies, selectedCompany } from '$lib/stores';
 	import type { Company } from '$lib/types';
