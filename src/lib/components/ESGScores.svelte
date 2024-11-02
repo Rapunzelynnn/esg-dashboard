@@ -116,40 +116,7 @@
 </script>
 
 <div class="h-full">
-    <div class="flex items-start justify-between mb-6">
-        <h2 class="text-2xl font-bold">ESG Performance</h2>
-        <div class="flex items-center gap-2">
-            <div class="w-24 h-24 relative">
-                <svg viewBox="0 0 120 120" class="w-full h-full transform -rotate-90">
-                    <circle
-                        cx="60"
-                        cy="60"
-                        r="54"
-                        stroke="#E5E7EB"
-                        stroke-width="6"
-                        fill="none"
-                        class="opacity-25"
-                    />
-                    <circle
-                        cx="60"
-                        cy="60"
-                        r="54"
-                        stroke="#22C55E"
-                        stroke-width="6"
-                        fill="none"
-                        stroke-linecap="round"
-                        style="stroke-dasharray: {esgScores.total * 3.39}, 339"
-                    />
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <div class="text-2xl font-bold">{formatScore(esgScores.total)}</div>
-                    <div class="text-sm text-gray-500">Total Score</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="space-y-8">
+    <div class="space-y-8 mt-6"> <!-- Added top margin for better spacing -->
         {#each categories as category}
             {@const categoryData = esgScores[category]}
             {@const rating = getScoreRating(categoryData.score, categoryData.mean, categoryData.max)}
@@ -160,7 +127,7 @@
                         <span class="text-2xl font-bold">{formatScore(categoryData.score)}</span>
                         <div class="text-sm text-gray-500">{rating.label}</div>
                         <div class="text-sm text-gray-500">
-                            {((categoryData.score - categoryData.mean) / categoryData.mean * 100).toFixed(1)}% above industry average
+                            {((categoryData.score - categoryData.mean) / categoryData.mean * 100).toFixed(1)}% {categoryData.score > categoryData.mean ? 'above' : 'below'} industry average
                         </div>
                     </div>
                 </div>
@@ -200,7 +167,7 @@
     </div>
 
     <!-- Rating Scale Legend -->
-    <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+    <!-- <div class="mt-8 p-4 bg-gray-50 rounded-lg">
         <div class="text-sm text-gray-600">
             <div class="flex items-center gap-2 mb-4">
                 <svg width="12" height="8" viewBox="0 0 12 8" class="text-gray-600">
@@ -218,5 +185,5 @@
                 {/each}
             </div>
         </div>
-    </div>
+    </div> -->
 </div>
