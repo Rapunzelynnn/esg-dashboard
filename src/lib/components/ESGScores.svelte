@@ -157,7 +157,7 @@
                 </div>
             </div>
             
-            <div class="group relative">
+            <div class="group relative mt-6 mb-8"> <!-- Added top and bottom margin for sector avg text space -->
                 <!-- Score Bar Container -->
                 <div class="relative group">
                     <!-- Progressbar -->
@@ -186,15 +186,22 @@
                     />
                 </div>
 
-                <!-- Sector Average Marker -->
+                <!-- Sector Average Marker with Text -->
                 <div 
-                    class="absolute top-0 -mt-0.5 transition-all duration-200 group-hover:-mt-1"
+                    class="absolute top-1/2 transform -translate-y-1/2"
                     style="left: {getMeanPosition(categoryData.mean, categoryData.max)}; transform: translateX(-50%)"
                 >
                     <div class="flex flex-col items-center">
-                        <svg width="12" height="6" viewBox="0 0 12 6" class="text-gray-600">
-                            <path d="M6 0L12 6H0L6 0Z" fill="currentColor"/>
-                        </svg>
+                        <!-- Added background and padding to text container -->
+                        <div class="relative">
+                            <svg width="12" height="6" viewBox="0 0 12 6" class="text-gray-600 mb-2">
+                                <path d="M6 0L12 6H0L6 0Z" fill="currentColor"/>
+                            </svg>
+                            <!-- White background for text -->
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 bg-white px-1 whitespace-nowrap">
+                                <span class="text-xs text-gray-500">Sector Avg: {formatScore(categoryData.mean)}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -206,9 +213,9 @@
                 {/if}
             </div>
             
+            <!-- Scale indicators -->
             <div class="flex justify-between text-xs text-gray-500">
                 <span>0</span>
-                <span>Sector Avg: {formatScore(categoryData.mean)}</span>
                 <span>Max: {formatScore(categoryData.max)}</span>
             </div>
         </div>
