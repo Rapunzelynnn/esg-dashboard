@@ -16,10 +16,10 @@
   let activeChart = 0;
 
   const charts = [
-    { id: 0, title: 'ESG Score Breakdown by Industry', icon: '📊' },
-    { id: 1, title: 'ESG Score vs Market Cap', icon: '💰' },
-    { id: 2, title: 'ESG Score Comparison', icon: '📈' },
-    { id: 3, title: 'ESG vs. Stock Price', icon: '📉' }
+    { id: 0, title: 'ESG Score Breakdown', icon: '📊' },
+    { id: 1, title: 'ESG vs Market Cap', icon: '💰' },
+    { id: 2, title: 'Score Comparison', icon: '📈' },
+    { id: 3, title: 'ESG vs Stock Price', icon: '📉' }
   ];
 
   async function loadPriceData() {
@@ -70,55 +70,57 @@
   });
 </script>
 
-<div class="max-w-[95%] mx-auto">
-  <!-- Company Profile Section -->
-  <div class="mb-8">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">Company Profile</h1>
-      <div class="w-96">
+<div class="h-screen flex flex-col p-4 overflow-hidden">
+  <!-- Company Profile Section - Fixed height -->
+  <div class="h-[35vh]">
+    <div class="flex justify-between items-center mb-2">
+      <h1 class="text-2xl font-bold text-gray-800">Company Profile</h1>
+      <div class="w-72">
         <CompanySearch />
       </div>
     </div>
     <CompanyProfile />
   </div>
 
-  <!-- Analysis Section -->
-  <div class="mb-8">
-    <h2 class="text-3xl font-bold mb-4 text-gray-800">Overall Analysis</h2>
-    
-    <!-- Chart Navigation -->
-    <div class="flex space-x-2 mb-6 overflow-x-auto pb-2">
-      {#each charts as chart}
-        <button
-          class="px-4 py-2 rounded-lg flex items-center space-x-2 whitespace-nowrap
-                 {activeChart === chart.id ? 
-                   'bg-blue-500 text-white' : 
-                   'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
-          on:click={() => activeChart = chart.id}
-        >
-          <span>{chart.icon}</span>
-          <span>{chart.title}</span>
-        </button>
-      {/each}
+  <!-- Analysis Section - Takes remaining height -->
+  <div class="flex-1 min-h-0">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-xl font-bold text-gray-800">Overall Analysis</h2>
+      
+      <!-- Compact Chart Navigation -->
+      <div class="flex space-x-1">
+        {#each charts as chart}
+          <button
+            class="px-2 py-1 rounded-lg text-sm flex items-center space-x-1
+                   {activeChart === chart.id ? 
+                     'bg-blue-500 text-white' : 
+                     'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
+            on:click={() => activeChart = chart.id}
+          >
+            <span>{chart.icon}</span>
+            <span class="hidden sm:inline">{chart.title}</span>
+          </button>
+        {/each}
+      </div>
     </div>
 
     {#if loading}
-      <div class="flex justify-center items-center h-64">
+      <div class="flex justify-center items-center h-full">
         <div class="text-gray-600">Loading data...</div>
       </div>
     {:else if $companies.length > 0}
-      <Card class="min-h-[600px] p-8">
+      <Card class="h-[calc(100%-40px)] p-4">
         {#if activeChart === 0}
-          <ESGIndustryAnalysis data={$companies} expanded={true} />
+          <ESGIndustryAnalysis data={$companies} expanded={false} />
         {:else if activeChart === 1}
-          <MarketCapCorrelation data={$companies} expanded={true} />
+          <MarketCapCorrelation data={$companies} expanded={false} />
         {:else if activeChart === 2}
-          <ScoreComparison data={$companies} expanded={true} />
+          <ScoreComparison data={$companies} expanded={false} />
         {:else if activeChart === 3}
           <StockPriceCorrelation 
             data={$companies} 
             priceData={processedPriceData}
-            expanded={true} 
+            expanded={false} 
           />
         {/if}
       </Card>
