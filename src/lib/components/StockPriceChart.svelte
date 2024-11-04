@@ -1,4 +1,3 @@
-<!-- $lib/components/StockPriceChart.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
     import { priceDataStore, loadPriceData } from '$lib/stores';
@@ -51,16 +50,16 @@
                 time: {
                     unit: 'month',
                     displayFormats: {
-                        month: 'MMM yyyy'
+                        month: 'MMM'
                     }
                 },
                 grid: {
-                    display: true,
+                    display: false,
                     borderColor: 'transparent'
                 },
                 ticks: {
                     font: {
-                        size: 12
+                        size: 10
                     },
                     color: '#666',
                     maxRotation: 45,
@@ -75,11 +74,11 @@
                 },
                 ticks: {
                     font: {
-                        size: 12
+                        size: 10
                     },
                     color: '#666',
                     callback: function(this: Scale<CoreScaleOptions>, tickValue: string | number) {
-                        return `$${Number(tickValue).toFixed(2)}`;
+                        return `$${Number(tickValue).toFixed(0)}`;
                     }
                 }
             }
@@ -94,7 +93,7 @@
                 bodyColor: '#666',
                 borderColor: '#e5e7eb',
                 borderWidth: 1,
-                padding: 8,
+                padding: 4,
                 cornerRadius: 4,
                 displayColors: false,
                 callbacks: {
@@ -118,23 +117,25 @@
             await loadPriceData(sym);
             
             const symbolData = $priceDataStore.get(sym) || [];
-            console.log(`Processing ${symbolData.length} data points for ${sym}`);
 
-            if (symbolData.length > 0) {
+            // Filter to show more frequent data points (every 3-4 days instead of 14)
+            const filteredData = symbolData.filter((_, index) => index % 1 === 0);
+
+            if (filteredData.length > 0) {
                 data = {
                     datasets: [{
                         label: `${sym} Price`,
-                        data: symbolData.map(d => ({
-                            x: new Date(d.date).getTime(), // Convert Date to timestamp (number)
+                        data: filteredData.map(d => ({
+                            x: new Date(d.date).getTime(),
                             y: d.price
                         })),
                         borderColor: '#2563eb',
                         backgroundColor: 'rgba(37, 99, 235, 0.1)',
                         fill: true,
-                        tension: 0.4,
-                        borderWidth: 2,
+                        tension: 0.1, // Reduced tension for less smoothing
+                        borderWidth: 1.5,
                         pointRadius: 0,
-                        pointHoverRadius: 4
+                        pointHoverRadius: 3
                     }]
                 };
             }
@@ -157,15 +158,15 @@
     });
 </script>
 
-<div class="bg-white rounded-lg">
-    <h3 class="text-lg font-semibold mb-4">Stock Price Trend (2023)</h3>
-    <div class="h-64"> <!-- Increased height to fill space -->
+<div class="bg-white rounded-lg h-full">
+    <div class="text-sm font-medium text-gray-600 mb-1">Stock Price Trend (2023)</div>
+    <div class="h-[calc(100%-2rem)]">
         {#if error}
-            <div class="h-full flex items-center justify-center text-red-500">
+            <div class="h-full flex items-center justify-center text-red-500 text-sm">
                 Error loading chart: {error.message}
             </div>
         {:else if !data?.datasets[0]?.data?.length}
-            <div class="h-full flex items-center justify-center text-gray-500">
+            <div class="h-full flex items-center justify-center text-gray-500 text-sm">
                 Loading price data...
             </div>
         {:else}

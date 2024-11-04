@@ -1,4 +1,3 @@
-<!-- $lib/components/ESGScores.svelte -->
 <script lang="ts">
     import { writable } from 'svelte/store';
     
@@ -8,6 +7,8 @@
         social: { score: number; mean: number; max: number };
         governance: { score: number; mean: number; max: number };
     };
+    export let showTotal = true;
+    export let showBreakdown = true;
 
     type CategoryKey = 'environmental' | 'social' | 'governance';
     const categories: CategoryKey[] = ['environmental', 'social', 'governance'];
@@ -58,132 +59,159 @@
         }
     ];
 
-    // Added missing formatScore function
     function formatScore(score: number): string {
         if (!score || isNaN(score)) return '0.0';
         return score.toFixed(1);
     }
 
-    // Added missing getMeanPosition function
     function getMeanPosition(score: number, max: number): string {
         if (!score || !max) return '0%';
         return `${(score / max) * 100}%`;
     }
 
-    // Added missing getCategoryLabel function
     function getCategoryLabel(category: CategoryKey): string {
         return category.charAt(0).toUpperCase() + category.slice(1);
     }
 
     function getScoreRating(score: number, mean: number, max: number): ScoreRange {
-        // Calculate how far above or below the mean the score is
         const meanPercentage = (mean / max) * 100;
         const scorePercentage = (score / max) * 100;
-        
-        // Calculate relative position compared to industry mean
         const relativePosition = ((scorePercentage - meanPercentage) / meanPercentage) * 100;
 
-        // Assign ratings based on relative position to industry mean
-        if (relativePosition >= 50) { // 50% or more above mean
-            return scoreRanges[0]; // Excellent
-        } else if (relativePosition >= 20) { // 20-49% above mean
-            return scoreRanges[1]; // Very Good
-        } else if (relativePosition >= -20) { // Within 20% of mean
-            return scoreRanges[2]; // Good
-        } else if (relativePosition >= -50) { // 20-50% below mean
-            return scoreRanges[3]; // Fair
-        } else { // More than 50% below mean
-            return scoreRanges[4]; // Poor
-        }
+        if (relativePosition >= 50) return scoreRanges[0];
+        else if (relativePosition >= 20) return scoreRanges[1];
+        else if (relativePosition >= -20) return scoreRanges[2];
+        else if (relativePosition >= -50) return scoreRanges[3];
+        else return scoreRanges[4];
     }
 
     function getScoreColor(score: number, mean: number, max: number): string {
         return getScoreRating(score, mean, max).color;
     }
 
-    function getScoreStatus(score: number, mean: number, max: number): string {
-        const scorePercentage = (score / max) * 100;
-        const meanPercentage = (mean / max) * 100;
-        const difference = scorePercentage - meanPercentage;
-        
-        if (difference > 0) {
-            return `${difference.toFixed(1)}% above industry average`;
-        } else if (difference < 0) {
-            return `${Math.abs(difference).toFixed(1)}% below industry average`;
-        }
-        return 'At industry average';
+    function getScoreStatus(score: number, mean: number): string {
+        const difference = ((score - mean) / mean * 100).toFixed(1);
+        const direction = score > mean ? 'above' : 'below';
+        return `${Math.abs(Number(difference))}% ${direction} industry average`;
     }
+
+    let activeTooltip = writable<string | null>(null);
 </script>
 
-<div class="h-full">
-    <div class="space-y-8 mt-6"> <!-- Added top margin for better spacing -->
-        {#each categories as category}
-            {@const categoryData = esgScores[category]}
-            {@const rating = getScoreRating(categoryData.score, categoryData.mean, categoryData.max)}
-            <div class="space-y-2">
-                <div class="flex items-start justify-between mb-2">
-                    <span class="text-xl font-medium">{getCategoryLabel(category)}</span>
-                    <div class="text-right">
-                        <span class="text-2xl font-bold">{formatScore(categoryData.score)}</span>
-                        <div class="text-sm text-gray-500">{rating.label}</div>
-                        <div class="text-sm text-gray-500">
-                            {((categoryData.score - categoryData.mean) / categoryData.mean * 100).toFixed(1)}% {categoryData.score > categoryData.mean ? 'above' : 'below'} industry average
-                        </div>
+{#if showTotal}
+<!-- Total Score Circle - Larger size with no extra spacing -->
+<div class="w-56 h-56"> <!-- Increased size, removed extra margins -->
+    <div class="relative w-full h-full">
+        <svg 
+            viewBox="0 0 120 120" 
+            class="w-full h-full transform -rotate-90"
+        >
+            <circle
+                cx="60"
+                cy="60"
+                r="54"
+                stroke="#E5E7EB"
+                stroke-width="6"
+                fill="none"
+                class="opacity-25"
+            />
+            <circle
+                cx="60"
+                cy="60"
+                r="54"
+                stroke="#22C55E"
+                stroke-width="6"
+                fill="none"
+                stroke-linecap="round"
+                style="stroke-dasharray: {esgScores.total * 3.39}, 339"
+            />
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="text-5xl font-bold leading-none">
+                {formatScore(esgScores.total)}
+            </div>
+            <div class="text-base text-gray-500 leading-tight mt-1">Total Score</div>
+        </div>
+    </div>
+</div>
+{/if}
+
+{#if showBreakdown}
+<div class="space-y-5">
+    {#each categories as category}
+        {@const categoryData = esgScores[category]}
+        {@const rating = getScoreRating(categoryData.score, categoryData.mean, categoryData.max)}
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-base font-medium">{getCategoryLabel(category)}</span>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl font-bold">{formatScore(categoryData.score)}</span>
+                        <span class="text-sm text-gray-500">{rating.label}</span>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        {getScoreStatus(categoryData.score, categoryData.mean)}
                     </div>
                 </div>
-                
-                <div class="relative">
-                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                            class="h-full rounded-full {getScoreColor(categoryData.score, categoryData.mean, categoryData.max)}"
+            </div>
+            
+            <div class="group relative">
+                <!-- Score Bar Container -->
+                <div class="relative group">
+                    <!-- Progressbar -->
+                    <div
+                        role="progressbar"
+                        aria-label="{getCategoryLabel(category)} score"
+                        aria-valuenow={categoryData.score}
+                        aria-valuemin="0"
+                        aria-valuemax={categoryData.max}
+                        class="h-3 bg-gray-100 rounded-full overflow-hidden transition-all duration-200 group-hover:h-4"
+                    >
+                        <div
+                            class="h-full rounded-full {getScoreColor(categoryData.score, categoryData.mean, categoryData.max)} transition-all duration-200"
                             style="width: {(categoryData.score / categoryData.max) * 100}%"
                         />
                     </div>
-                    
-                    <!-- Sector Average Marker -->
-                    <div 
-                        class="absolute top-0 -mt-1"
-                        style="left: {getMeanPosition(categoryData.mean, categoryData.max)}; transform: translateX(-50%)"
-                    >
-                        <div class="flex flex-col items-center">
-                            <svg width="16" height="8" viewBox="0 0 16 8" class="text-gray-600">
-                                <path d="M8 0L16 8H0L8 0Z" fill="currentColor"/>
-                            </svg>
-                        </div>
+
+                    <!-- Invisible button for interaction -->
+                    <button
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        aria-label="Show details for {getCategoryLabel(category)} score"
+                        on:mouseenter={() => $activeTooltip = category}
+                        on:mouseleave={() => $activeTooltip = null}
+                        on:focus={() => $activeTooltip = category}
+                        on:blur={() => $activeTooltip = null}
+                    />
+                </div>
+
+                <!-- Sector Average Marker -->
+                <div 
+                    class="absolute top-0 -mt-0.5 transition-all duration-200 group-hover:-mt-1"
+                    style="left: {getMeanPosition(categoryData.mean, categoryData.max)}; transform: translateX(-50%)"
+                >
+                    <div class="flex flex-col items-center">
+                        <svg width="12" height="6" viewBox="0 0 12 6" class="text-gray-600">
+                            <path d="M6 0L12 6H0L6 0Z" fill="currentColor"/>
+                        </svg>
                     </div>
                 </div>
-                
-                <div class="flex justify-between text-sm text-gray-600">
-                    <span>0</span>
-                    <span>Sector Avg: {formatScore(categoryData.mean)}</span>
-                    <span>Max: {formatScore(categoryData.max)}</span>
-                </div>
 
-                <div class="text-sm text-gray-600 mt-1">
-                    {rating.description}
-                </div>
-            </div>
-        {/each}
-    </div>
-
-    <!-- Rating Scale Legend -->
-    <!-- <div class="mt-8 p-4 bg-gray-50 rounded-lg">
-        <div class="text-sm text-gray-600">
-            <div class="flex items-center gap-2 mb-4">
-                <svg width="12" height="8" viewBox="0 0 12 8" class="text-gray-600">
-                    <path d="M6 0L12 8H0L6 0Z" fill="currentColor"/>
-                </svg>
-                <span>Sector Average indicates the mean score across your industry</span>
+                <!-- Hover Tooltip -->
+                {#if $activeTooltip === category}
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                        {rating.description}
+                    </div>
+                {/if}
             </div>
             
-            <div class="grid grid-cols-5 gap-2">
-                {#each scoreRanges.slice().reverse() as range}
-                    <div class="text-center">
-                        <div class={`h-2 rounded-full ${range.color} mb-1`}></div>
-                        <div class="text-xs">{range.label}</div>
-                    </div>
-                {/each}
+            <div class="flex justify-between text-xs text-gray-500">
+                <span>0</span>
+                <span>Sector Avg: {formatScore(categoryData.mean)}</span>
+                <span>Max: {formatScore(categoryData.max)}</span>
             </div>
         </div>
-    </div> -->
+    {/each}
 </div>
+{/if}
