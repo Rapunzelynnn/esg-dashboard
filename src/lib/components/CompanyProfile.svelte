@@ -1,3 +1,4 @@
+<!-- $lib/components/CompanyProfile.svelte -->
 <script lang="ts">
     import { selectedCompany } from '$lib/stores';
     import StockPriceChart from './StockPriceChart.svelte';

@@ -1,5 +1,7 @@
+<!-- $lib/components/ESGIndustryAnalysis.svelte -->
 <script lang="ts">
   import type { Company } from '$lib/types';
+  import { selectedCompany } from '$lib/stores';
 
   export let data: Company[] = [];
   export let expanded = false;  // Add this line
@@ -31,24 +33,131 @@
       selectedIndustries = new Set(industries);
       initialized = true;
   }
-  
-  // Filter data based on selection (maintains score ordering for chart)
-  $: industryData = allIndustryData.filter(d => selectedIndustries.has(d.industryName));
 
-  // Filter industries based on search (maintains alphabetical order)
+      // Add industry category mappings based on the provided logic
+  const industryCategories: Record<string, string[]> = {
+    // Technology & Electronics
+    'Software': [
+      'Software',
+      'IT Services',
+      'Computers & Peripherals and Office Electronics',
+      'Semiconductors & Semiconductor Equipment',
+      'Electronic Equipment, Instruments & Components'
+    ],
+    'IT Services': [
+      'IT Services',
+      'Software',
+      'Telecommunication Services',
+      'Electronic Equipment, Instruments & Components'
+    ],
+
+    // Financial Services & Real Estate
+    'Banks': [
+      'Banks',
+      'Insurance',
+      'Diversified Financial Services and Capital Markets',
+      'Equity Real Estate Investment Trusts (REITs)',
+      'Real Estate Management & Development'
+    ],
+    'Insurance': [
+      'Insurance',
+      'Banks',
+      'Diversified Financial Services and Capital Markets',
+      'Health Care Providers & Services'
+    ],
+
+    // Healthcare & Life Sciences
+    'Health Care Equipment & Supplies': [
+      'Health Care Equipment & Supplies',
+      'Health Care Providers & Services',
+      'Biotechnology',
+      'Pharmaceuticals',
+      'Life Sciences Tools & Services'
+    ],
+    
+    // Energy & Utilities
+    'Electric Utilities': [
+      'Electric Utilities',
+      'Multi and Water Utilities',
+      'Gas Utilities',
+      'Oil & Gas Storage & Transportation',
+      'Energy Equipment & Services'
+    ],
+
+    // Industrial & Manufacturing
+    'Aerospace & Defense': [
+      'Aerospace & Defense',
+      'Machinery and Electrical Equipment',
+      'Electrical Components & Equipment',
+      'Transportation and Transportation Infrastructure'
+    ]
+  };
+
+   // Function to get related industries for the selected company
+  function getRelatedIndustries(industryName: string): Set<string> {
+    const defaultCount = 5;
+    const relatedIndustries = new Set<string>();
+    
+    if (!industryName) return new Set(allIndustryData.slice(0, defaultCount).map(d => d.industryName));
+    
+    // Add the company's own industry first
+    relatedIndustries.add(industryName);
+    
+    // Add related industries from the mapping
+    if (industryCategories[industryName]) {
+      industryCategories[industryName].forEach(industry => {
+        if (industries.includes(industry)) {
+          relatedIndustries.add(industry);
+        }
+      });
+    }
+    
+    // If we need more industries, add top performers
+    if (relatedIndustries.size < defaultCount) {
+      allIndustryData
+        .filter(d => !relatedIndustries.has(d.industryName))
+        .slice(0, defaultCount - relatedIndustries.size)
+        .forEach(d => relatedIndustries.add(d.industryName));
+    }
+    
+    return relatedIndustries;
+  }
+
+    // Update selected industries when company changes or on initial load
+  $: if ($selectedCompany && industries.length > 0) {
+    if (!initialized || $selectedCompany.industryName) {
+      selectedIndustries = getRelatedIndustries($selectedCompany.industryName);
+      initialized = true;
+    }
+  } else if (industries.length > 0 && !initialized) {
+    // Fallback to top performers if no company selected
+    selectedIndustries = new Set(allIndustryData.slice(0, 5).map(d => d.industryName));
+    initialized = true;
+  }
+
+  // Modify the industry data sorting to prioritize highlighted industry
+  $: industryData = allIndustryData
+    .filter(d => selectedIndustries.has(d.industryName))
+    .sort((a, b) => {
+      // If an industry matches the highlighted industry, put it first
+      if (a.industryName === highlightedIndustry) return -1;
+      if (b.industryName === highlightedIndustry) return 1;
+      // Otherwise, maintain the original sorting by total score
+      return b.total - a.total;
+    });
+
+  // Your existing functions and reactive declarations for filtering and UI
   $: filteredIndustries = industries.filter(industry => 
     industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Group filtered industries by first letter
   $: groupedIndustries = filteredIndustries.reduce((acc, industry) => {
-    const firstLetter = industry[0].toUpperCase();
+  const firstLetter = industry[0].toUpperCase();
     if (!acc[firstLetter]) acc[firstLetter] = [];
     acc[firstLetter].push(industry);
     return acc;
   }, {} as Record<string, string[]>);
 
-  // Sort the group keys alphabetically
   $: sortedGroups = Object.keys(groupedIndustries).sort();
 
   function processData(companies: Company[]): IndustryData[] {
@@ -146,6 +255,34 @@
     return lines.join('\n');
   }
   $: chartHeight = expanded ? 500 : 320;
+    // Add a reactive variable to track the highlighted industry
+  $: highlightedIndustry = $selectedCompany?.industryName || '';
+
+  // Add helper to get explanation text
+  function getComparisonExplanation(industryName: string): string {
+    if (!industryName) return '';
+    
+    const explanations: Record<string, string> = {
+      'Textiles, Apparel & Luxury Goods': 'Showing comparison with consumer retail industries and manufacturing sectors due to shared supply chain and consumer market characteristics.',
+      'Software': 'Comparing with technology and digital services sectors due to shared technological infrastructure and market dynamics.',
+      'Banks': 'Showing financial services sector comparisons due to regulatory environment and market interdependencies.',
+      // Add more industry-specific explanations
+    };
+
+    return explanations[industryName] || 'Showing comparison with related industries based on business model and market sector.';
+  }
+
+  // Modify your bar chart styles based on highlighted industry
+  function getBarStyles(industryName: string) {
+    const isHighlighted = industryName === highlightedIndustry;
+    return {
+      opacity: isHighlighted ? '1' : '0.7',
+      transform: isHighlighted ? 'scale(1.02)' : 'scale(1)',
+      transition: 'all 0.3s ease',
+      position: 'relative',
+      zIndex: isHighlighted ? '10' : '1'
+    };
+  }
 </script>
 
 <svelte:window on:click={handleClickOutside} />
@@ -231,7 +368,24 @@
         </div>
       {/each}
     </div>
+    <!-- Add explanation section here -->
+    {#if highlightedIndustry}
+      <div class="mb-4 bg-blue-50 p-3 rounded-lg">
+        <div class="flex items-start gap-2">
+          <div class="p-1 bg-blue-100 rounded-full">
+            <svg class="w-4 h-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">{getComparisonExplanation(highlightedIndustry)}</p>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
+
+
 
   <!-- Chart Component -->
   <div class="relative w-full" style="height: {chartHeight + 80}px">
@@ -266,7 +420,12 @@
         <!-- Bars container -->
         <div class="relative h-full flex">
           {#each industryData as industry}
-            <div class="flex-1 min-w-[160px] relative px-2">
+            <div 
+              class="flex-1 min-w-[160px] relative px-2"
+              style={Object.entries(getBarStyles(industry.industryName))
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(';')}
+            >
               <!-- Bars group -->
               <div class="h-full flex items-end justify-center gap-1" style="height: {chartHeight}px">
                 <!-- Environmental -->
@@ -283,11 +442,19 @@
                 <div class="w-8 relative" style="height: {getHeight(industry.governance)}">
                   <div class="absolute inset-0 bg-indigo-500 transition-all hover:opacity-80" />
                 </div>
+
+                <!-- Add highlight indicator for selected industry -->
+                {#if industry.industryName === highlightedIndustry}
+                  <div class="absolute -bottom-1 left-0 right-0 h-1 bg-blue-500 rounded-t-lg"></div>
+                {/if}
               </div>
 
               <!-- Industry label -->
               <div class="absolute left-1/2 -translate-x-1/2" style="top: {chartHeight + 8}px">
-                <div class="text-xs text-gray-600 text-center whitespace-pre-line" style="width: max-content; max-width: 140px;">
+                <div 
+                  class="text-xs {industry.industryName === highlightedIndustry ? 'font-semibold text-blue-600' : 'text-gray-600'} text-center whitespace-pre-line"
+                  style="width: max-content; max-width: 140px;"
+                >
                   {formatIndustryName(industry.industryName)}
                 </div>
               </div>
