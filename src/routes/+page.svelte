@@ -1,4 +1,4 @@
-<!-- $lib/routes/analysis/+page.svelte -->
+<!-- $lib/routes/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { loadCompanyData, companies } from '$lib/stores';
@@ -70,46 +70,41 @@
   });
 </script>
 
-<div class="h-screen flex flex-col p-4 overflow-hidden">
-  <!-- Company Profile Section - Fixed height -->
-  <div class="h-[35vh]">
-    <div class="flex justify-between items-center mb-2">
-      <h1 class="text-2xl font-bold text-gray-800">Company Profile</h1>
-      <div class="w-72">
+<div class="root-container">
+  <!-- Company Profile Section -->
+  <div class="profile-section">
+    <div class="header-row">
+      <h1 class="title">Company Profile</h1>
+      <div class="search-box">
         <CompanySearch />
       </div>
     </div>
-    <CompanyProfile />
+    <div class="profile-content">
+      <CompanyProfile />
+    </div>
   </div>
 
-  <!-- Analysis Section - Takes remaining height -->
-  <div class="flex-1 min-h-0">
-    <div class="flex items-center justify-between mb-2">
-      <h2 class="text-xl font-bold text-gray-800">Overall Analysis</h2>
-      
-      <!-- Compact Chart Navigation -->
-      <div class="flex space-x-1">
+  <!-- Analysis Section -->
+  <div class="analysis-section">
+    <div class="header-row">
+      <h2 class="title">Overall Analysis</h2>
+      <div class="chart-nav">
         {#each charts as chart}
           <button
-            class="px-2 py-1 rounded-lg text-sm flex items-center space-x-1
-                   {activeChart === chart.id ? 
-                     'bg-blue-500 text-white' : 
-                     'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
+            class="nav-button {activeChart === chart.id ? 'active' : ''}"
             on:click={() => activeChart = chart.id}
           >
             <span>{chart.icon}</span>
-            <span class="hidden sm:inline">{chart.title}</span>
+            <span class="button-text">{chart.title}</span>
           </button>
         {/each}
       </div>
     </div>
 
     {#if loading}
-      <div class="flex justify-center items-center h-full">
-        <div class="text-gray-600">Loading data...</div>
-      </div>
+      <div class="centered-message">Loading data...</div>
     {:else if $companies.length > 0}
-      <Card class="h-[calc(100%-40px)] p-4">
+      <Card class="content-card">
         {#if activeChart === 0}
           <ESGIndustryAnalysis data={$companies} expanded={false} />
         {:else if activeChart === 1}
@@ -125,9 +120,109 @@
         {/if}
       </Card>
     {:else}
-      <div class="text-center p-4">
-        <p class="text-gray-600">No company data available</p>
-      </div>
+      <div class="centered-message">No company data available</div>
     {/if}
   </div>
 </div>
+
+<style>
+  .root-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 8px; /* Reduced padding */
+    box-sizing: border-box;
+    gap: 8px;
+  }
+
+  .profile-section {
+    flex: 0 0 25%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px; /* Added horizontal padding */
+  }
+
+  .analysis-section {
+    flex: 0 0 75%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px; /* Added horizontal padding */
+  }
+
+  .header-row {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 36px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .search-box {
+    width: 300px;
+  }
+
+  .chart-nav {
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .nav-button.active {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .content-card {
+    flex: 1;
+    height: calc(100% - 40px);
+    min-height: 400px;
+  }
+
+  .centered-message {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+
+  :global(.card) {
+    height: 100%;
+    margin: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.chart-content) {
+    flex: 1;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Ensure charts expand to fill width */
+  :global(.recharts-wrapper),
+  :global(.recharts-surface) {
+    width: 100% !important;
+  }
+</style>

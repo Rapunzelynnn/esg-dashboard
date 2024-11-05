@@ -1,18 +1,20 @@
+<!-- $lib/routes/+layout.svelte -->
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/stores';
-  
-  let navigation = [
-    { path: '/', label: 'Company Profiles' },
-    { path: '/analysis', label: 'Overall Analysis' }
-  ];
+  import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 </script>
 
-<div class="min-h-screen bg-gray-50 flex">
-  <!-- Main Content -->
-  <main class="flex-1">
-    <div class="py-8 px-8">
-      <slot />
-    </div>
+<DashboardLayout>
+  <main>
+    <slot />
   </main>
-</div>
+</DashboardLayout>
+
+<style>
+  :global(main) {
+    padding: 2rem;
+    width: 100%;
+    height: 100%;
+  }
+</style>
