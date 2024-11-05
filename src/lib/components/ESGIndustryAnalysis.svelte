@@ -2,10 +2,13 @@
 <script lang="ts">
   import type { Company } from '$lib/types';
   import { selectedCompany } from '$lib/stores';
+  import { fade } from 'svelte/transition';
 
+  // Props
   export let data: Company[] = [];
-  export let expanded = false;  // Add this line
+  export let expanded = false;
 
+  // Types and Interfaces
   interface IndustryData {
     industryName: string;
     environmental: number;
@@ -14,28 +17,46 @@
     total: number;
   }
 
-  // Initialize state
+  type ESGType = 'environmental' | 'social' | 'governance';
+  
+  type TooltipContent = {
+    visible: boolean;
+    score: number;
+    type: ESGType;
+    industryName: string;
+    indicatorText?: string;
+  };
+
+  // Constants and Styling
+  const maxScore = 100;
+  const defaultChartHeight = 320;
+  const expandedChartHeight = 500;
+  const gridLines = [20, 40, 60, 80];
+  const yAxisLabels = [0, 20, 40, 60, 80, 100];
+
+  // Style configurations
+  const barStyles = {
+    base: "transition-all duration-200 ease-out transform",
+    hover: "scale-105 shadow-lg",
+    tooltip: "absolute -top-14 left-1/2 -translate-x-1/2 bg-gray-900/95 text-white px-3 py-2 rounded-lg shadow-lg z-50"
+  };
+
+  // State Management
   let selectedIndustries = new Set<string>();
   let searchTerm = '';
   let showDropdown = false;
   let initialized = false;
+  let chartHeight = expanded ? expandedChartHeight : defaultChartHeight;
 
-  // Process and sort the data
-  $: allIndustryData = processData(data);
-  
-  // Get unique industry names and sort alphabetically for filter
-  $: industries = [...new Set(data.map(d => d.industryName))].sort((a, b) => 
-    a.localeCompare(b, undefined, { sensitivity: 'base' })
-  );
+  // Tooltip state
+  let tooltipContent: TooltipContent = {
+    visible: false,
+    score: 0,
+    type: 'environmental',
+    industryName: ''
+  };
 
-  // Handle initial load
-  $: if (industries.length > 0 && !initialized) {
-      selectedIndustries = new Set(industries);
-      initialized = true;
-  }
-
-      // Add industry category mappings based on the provided logic
-  const industryCategories: Record<string, string[]> = {
+    const industryCategories: Record<string, string[]> = {
     // Technology & Electronics
     'Software': [
       'Software',
@@ -93,6 +114,136 @@
     ]
   };
 
+  // Reactive declarations
+  $: allIndustryData = processData(data);
+  $: industries = [...new Set(data.map(d => d.industryName))].sort((a, b) => 
+    a.localeCompare(b, undefined, { sensitivity: 'base' })
+  );
+  $: highlightedIndustry = $selectedCompany?.industryName || '';
+  $: chartHeight = expanded ? expandedChartHeight : defaultChartHeight;
+
+  // Filter related reactive declarations
+  $: filteredIndustries = industries.filter(industry => 
+    industry.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  $: groupedIndustries = filteredIndustries.reduce((acc, industry) => {
+    const firstLetter = industry[0].toUpperCase();
+    if (!acc[firstLetter]) acc[firstLetter] = [];
+    acc[firstLetter].push(industry);
+    return acc;
+  }, {} as Record<string, string[]>);
+  $: sortedGroups = Object.keys(groupedIndustries).sort();
+
+  // Sorted industry data with highlighted industry first
+  $: industryData = allIndustryData
+    .filter(d => selectedIndustries.has(d.industryName))
+    .sort((a, b) => {
+      if (a.industryName === highlightedIndustry) return -1;
+      if (b.industryName === highlightedIndustry) return 1;
+      return b.total - a.total;
+    });
+
+  // Functions
+  function getBarColor(type: ESGType): string {
+    const colors = {
+      environmental: 'bg-blue-500',
+      social: 'bg-green-500',
+      governance: 'bg-indigo-500'
+    };
+    return colors[type];
+  }
+
+  function showTooltip(score: number, type: ESGType, industryName: string) {
+    tooltipContent = {
+      visible: true,
+      score,
+      type,
+      industryName
+    };
+  }
+
+  function hideTooltip() {
+    tooltipContent.visible = false;
+  }
+
+  function handleClickOutside() {
+    tooltipContent.visible = false;
+    showDropdown = false;
+  }
+
+  function getHeight(value: number): string {
+    return `${(value / maxScore) * chartHeight}px`;
+  }
+  
+  function getGridLinePosition(value: number): string {
+    return `${(1 - value / maxScore) * chartHeight}px`;
+  }
+
+  function formatIndustryName(name: string): string {
+    const words = name.split(' ');
+    let lines = [''];
+    let currentLine = 0;
+    
+    words.forEach(word => {
+      if (lines[currentLine].length + word.length > 15 && lines[currentLine].length > 0) {
+        currentLine++;
+        lines[currentLine] = '';
+      }
+      lines[currentLine] = lines[currentLine] + (lines[currentLine].length ? ' ' : '') + word;
+    });
+    
+    return lines.join('\n');
+  }
+
+  // Filter functions
+  function toggleIndustry(industry: string) {
+    if (selectedIndustries.has(industry)) {
+      selectedIndustries.delete(industry);
+    } else {
+      selectedIndustries.add(industry);
+    }
+    // Create a new Set to trigger reactivity
+    selectedIndustries = new Set(selectedIndustries);
+  }
+
+  function selectAll() {
+    selectedIndustries = new Set(industries);
+  }
+
+  function clearAll() {
+    if ($selectedCompany?.industryName) {
+      selectedIndustries = new Set([$selectedCompany.industryName]);
+    } else {
+      selectedIndustries = new Set();
+    }
+  }
+
+  function removeIndustry(industry: string) {
+    if (industry === $selectedCompany?.industryName) return;
+    
+    selectedIndustries.delete(industry);
+    selectedIndustries = new Set(selectedIndustries);
+  }
+
+
+
+  
+
+  // Initial load handling
+  $: if ($selectedCompany && industries.length > 0) {
+    if (!initialized) {
+      // Only set initial industries once
+      selectedIndustries = getRelatedIndustries($selectedCompany.industryName);
+      initialized = true;
+    }
+  } else if (industries.length > 0 && !initialized) {
+    selectedIndustries = new Set(industries);
+    initialized = true;
+  }
+
+
+
+
    // Function to get related industries for the selected company
   function getRelatedIndustries(industryName: string): Set<string> {
     const defaultCount = 5;
@@ -135,31 +286,6 @@
     initialized = true;
   }
 
-  // Modify the industry data sorting to prioritize highlighted industry
-  $: industryData = allIndustryData
-    .filter(d => selectedIndustries.has(d.industryName))
-    .sort((a, b) => {
-      // If an industry matches the highlighted industry, put it first
-      if (a.industryName === highlightedIndustry) return -1;
-      if (b.industryName === highlightedIndustry) return 1;
-      // Otherwise, maintain the original sorting by total score
-      return b.total - a.total;
-    });
-
-  // Your existing functions and reactive declarations for filtering and UI
-  $: filteredIndustries = industries.filter(industry => 
-    industry.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  $: groupedIndustries = filteredIndustries.reduce((acc, industry) => {
-  const firstLetter = industry[0].toUpperCase();
-    if (!acc[firstLetter]) acc[firstLetter] = [];
-    acc[firstLetter].push(industry);
-    return acc;
-  }, {} as Record<string, string[]>);
-
-  $: sortedGroups = Object.keys(groupedIndustries).sort();
-
   function processData(companies: Company[]): IndustryData[] {
     const industryGroups = companies.reduce((acc, company) => {
       if (!acc[company.industryName]) {
@@ -192,71 +318,19 @@
     return arr.length ? Number((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)) : 0;
   }
 
-  // Filter functions
-  function toggleIndustry(industry: string) {
-      if (selectedIndustries.has(industry)) {
-          selectedIndustries.delete(industry);
-      } else {
-          selectedIndustries.add(industry);
-      }
-      selectedIndustries = selectedIndustries; // Trigger reactivity
+// Original initialization logic
+$: if ($selectedCompany && industries.length > 0) {
+  if (!initialized) {
+    selectedIndustries = getRelatedIndustries($selectedCompany.industryName);
+    initialized = true;
   }
+} else if (industries.length > 0 && !initialized) {
+  // Keep all industries visible by default
+  selectedIndustries = new Set(industries);
+  initialized = true;
+}
 
-  function selectAll() {
-      selectedIndustries = new Set(industries);
-      selectedIndustries = selectedIndustries; // Trigger reactivity
-  }
-
-  function clearAll() {
-      selectedIndustries = new Set();
-      selectedIndustries = selectedIndustries; // Trigger reactivity
-  }
-
-  function removeIndustry(industry: string) {
-      selectedIndustries.delete(industry);
-      selectedIndustries = selectedIndustries;
-  }
-
-
-  function handleClickOutside(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.filter-dropdown')) {
-      showDropdown = false;
-    }
-  }
-
-  let chartHeight = 320;
-  const maxScore = 100;
-
-  function getHeight(value: number): string {
-    return `${(value / maxScore) * chartHeight}px`;
-  }
-    
-  const gridLines = [20, 40, 60, 80];
-  const yAxisLabels = [0, 20, 40, 60, 80, 100];
-
-  function getGridLinePosition(value: number): string {
-    return `${(1 - value / maxScore) * chartHeight}px`;
-  }
-
-  function formatIndustryName(name: string): string {
-    const words = name.split(' ');
-    let lines = [''];
-    let currentLine = 0;
-    
-    words.forEach(word => {
-      if (lines[currentLine].length + word.length > 15 && lines[currentLine].length > 0) {
-        currentLine++;
-        lines[currentLine] = '';
-      }
-      lines[currentLine] = lines[currentLine] + (lines[currentLine].length ? ' ' : '') + word;
-    });
-    
-    return lines.join('\n');
-  }
   $: chartHeight = expanded ? 500 : 320;
-    // Add a reactive variable to track the highlighted industry
-  $: highlightedIndustry = $selectedCompany?.industryName || '';
 
   // Add helper to get explanation text
   function getComparisonExplanation(industryName: string): string {
@@ -283,12 +357,22 @@
       zIndex: isHighlighted ? '10' : '1'
     };
   }
+  // Initialize selected industries
+  $: if ($selectedCompany && industries.length > 0) {
+    if (!initialized || $selectedCompany.industryName) {
+      selectedIndustries = getRelatedIndustries($selectedCompany.industryName);
+      initialized = true;
+    }
+  } else if (industries.length > 0 && !initialized) {
+    selectedIndustries = new Set(industries);
+    initialized = true;
+  }
 </script>
 
 <svelte:window on:click={handleClickOutside} />
 
 <div class="bg-white p-6 rounded-lg shadow-sm">
-  <h2 class="text-xl font-semibold mb-4">ESG Score Breakdown by Industry</h2>
+  <h2 class="text-xl font-semibold mb-4">Industrial Score Breakdown</h2>
 
   <!-- Improved Filter UI -->
   <div class="mb-6 space-y-4">
@@ -428,26 +512,80 @@
             >
               <!-- Bars group -->
               <div class="h-full flex items-end justify-center gap-1" style="height: {chartHeight}px">
-                <!-- Environmental -->
-                <div class="w-8 relative" style="height: {getHeight(industry.environmental)}">
-                  <div class="absolute inset-0 bg-blue-500 transition-all hover:opacity-80" />
+                <!-- Environmental bar -->
+                <div 
+                  role="button"
+                  tabindex="0"
+                  aria-label="Environmental score: {industry.environmental.toFixed(1)}"
+                  class="w-8 relative group cursor-pointer transition-all duration-150 hover:scale-105" 
+                  style="height: {getHeight(industry.environmental)}"
+                  on:mouseenter={() => showTooltip(industry.environmental, 'environmental', industry.industryName)}
+                  on:mouseleave={hideTooltip}
+                >
+                  <div class="absolute inset-0 {getBarColor('environmental')} transition-all duration-200 group-hover:opacity-80" />
+                  
+                  <!-- Tooltip using Tailwind classes -->
+                  {#if tooltipContent.visible && tooltipContent.type === 'environmental' && tooltipContent.industryName === industry.industryName}
+                    <div 
+                      class="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg transition-all duration-200"
+                      role="tooltip"
+                    >
+                      {industry.environmental.toFixed(1)}
+                    </div>
+                  {/if}
                 </div>
 
-                <!-- Social -->
-                <div class="w-8 relative" style="height: {getHeight(industry.social)}">
-                  <div class="absolute inset-0 bg-green-500 transition-all hover:opacity-80" />
+                <!-- Social bar -->
+                <div 
+                  role="button"
+                  tabindex="0"
+                  aria-label="Social score: {industry.social.toFixed(1)}"
+                  class="w-8 relative group cursor-pointer transition-all duration-150 hover:scale-105" 
+                  style="height: {getHeight(industry.environmental)}"
+                  on:mouseenter={() => showTooltip(industry.social, 'social', industry.industryName)}
+                  on:mouseleave={hideTooltip}
+                >
+                  <div class="absolute inset-0 {getBarColor('social')} transition-all duration-200 group-hover:opacity-80" />
+                  
+                  <!-- Tooltip using Tailwind classes -->
+                  {#if tooltipContent.visible && tooltipContent.type === 'social' && tooltipContent.industryName === industry.industryName}
+                    <div 
+                      class="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg transition-all duration-200"
+                      role="tooltip"
+                    >
+                      {industry.social.toFixed(1)}
+                    </div>
+                  {/if}
                 </div>
 
-                <!-- Governance -->
-                <div class="w-8 relative" style="height: {getHeight(industry.governance)}">
-                  <div class="absolute inset-0 bg-indigo-500 transition-all hover:opacity-80" />
+                <!-- Governance bar -->
+                <div 
+                  role="button"
+                  tabindex="0"
+                  aria-label="Governance score: {industry.governance.toFixed(1)}"
+                  class="w-8 relative group cursor-pointer transition-all duration-150 hover:scale-105" 
+                  style="height: {getHeight(industry.governance)}"
+                  on:mouseenter={() => showTooltip(industry.governance, 'governance', industry.industryName)}
+                  on:mouseleave={hideTooltip}
+                >
+                  <div class="absolute inset-0 {getBarColor('governance')} transition-all duration-200 group-hover:opacity-80" />
+                  
+                  <!-- Tooltip using Tailwind classes -->
+                  {#if tooltipContent.visible && tooltipContent.type === 'governance' && tooltipContent.industryName === industry.industryName}
+                    <div 
+                      class="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg transition-all duration-200"
+                      role="tooltip"
+                    >
+                      {industry.governance.toFixed(1)}
+                    </div>
+                  {/if}
                 </div>
-
-                <!-- Add highlight indicator for selected industry -->
-                {#if industry.industryName === highlightedIndustry}
-                  <div class="absolute -bottom-1 left-0 right-0 h-1 bg-blue-500 rounded-t-lg"></div>
-                {/if}
               </div>
+
+              <!-- Highlight indicator for selected industry -->
+              {#if industry.industryName === highlightedIndustry}
+                <div class="absolute -bottom-1 left-0 right-0 h-1 bg-blue-500 rounded-t-lg"></div>
+              {/if}
 
               <!-- Industry label -->
               <div class="absolute left-1/2 -translate-x-1/2" style="top: {chartHeight + 8}px">

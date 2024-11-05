@@ -16,7 +16,7 @@
   let activeChart = 0;
 
   const charts = [
-    { id: 0, title: 'ESG Score Breakdown', icon: '📊' },
+    { id: 0, title: 'Industrial Score Breakdown', icon: '📊' },
     { id: 1, title: 'ESG vs Market Cap', icon: '💰' },
     { id: 2, title: 'Score Comparison', icon: '📈' },
     { id: 3, title: 'ESG vs Stock Price', icon: '📉' }
