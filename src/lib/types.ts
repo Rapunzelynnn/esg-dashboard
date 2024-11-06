@@ -142,3 +142,25 @@ export interface StockChartOptions extends Omit<ChartOptions<'line'>, 'scales'> 
         };
     };
 }
+export interface IndustryStats {
+  companies: Company[];
+  avgESG: number;
+  avgMarketCap: number;
+  stdDevESG: number;
+}
+
+export interface IndustryAccumulator {
+  [key: string]: IndustryStats;
+}
+
+// Optional: Add this interface if you want to type the processed market cap data
+export interface ProcessedCompanyData extends Company {
+  relativeESG: number;
+  isOutlier: boolean;
+}
+export interface ProcessedCompanyData extends Company {
+  relativeESG: number;
+  isOutlier: boolean;
+  industryAvg?: number;
+  industryStdDev?: number;
+}
