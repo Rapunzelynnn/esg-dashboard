@@ -10,24 +10,23 @@
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Increased width to use more horizontal space
-      const baseWidth = 2400; // Increased from 1920
-      const baseHeight = 1200;
+      // Using 50% zoom equivalent dimensions
+      const baseWidth = viewportWidth * 2;  // This will make it match your 50% zoom view
+      const baseHeight = viewportHeight * 2;
       
-      const horizontalScale = viewportWidth / baseWidth;
-      const verticalScale = viewportHeight / baseHeight;
-      const scale = Math.min(horizontalScale, verticalScale) * 0.98; // Using 98% of available space
+      // Calculate scale to match 50% zoom
+      const scale = 0.5;  // Fixed scale to match your original 50% zoom
       
+      // Apply transformations
       container.style.transform = `scale(${scale})`;
       container.style.width = `${baseWidth}px`;
       container.style.height = `${baseHeight}px`;
+      container.style.transformOrigin = '0 0';
       
-      const scaledWidth = baseWidth * scale;
-      const scaledHeight = baseHeight * scale;
-      wrapper.style.width = `${scaledWidth}px`;
-      wrapper.style.height = `${scaledHeight}px`;
-      wrapper.style.marginLeft = `${(viewportWidth - scaledWidth) / 2}px`;
-      wrapper.style.marginTop = `${(viewportHeight - scaledHeight) / 2}px`;
+      // Position the wrapper
+      wrapper.style.width = `${viewportWidth}px`;
+      wrapper.style.height = `${viewportHeight}px`;
+      wrapper.style.overflow = 'hidden';
     }
   }
   
@@ -52,14 +51,12 @@
     position: fixed;
     top: 0;
     left: 0;
-    overflow: hidden;
   }
 
   .dashboard-container {
     position: absolute;
     top: 0;
     left: 0;
-    transform-origin: 0 0;
     background: white;
   }
 

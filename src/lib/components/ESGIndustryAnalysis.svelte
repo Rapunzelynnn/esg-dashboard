@@ -619,3 +619,27 @@ $: if ($selectedCompany && industries.length > 0) {
     </div>
   </div>
 </div>
+
+<style>
+  /* Add these styles to your ESGIndustryAnalysis component */
+  .root-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Adjust the chart height to be larger */
+  :global(.chart-container) {
+    min-height: 600px !important;
+  }
+
+  /* Make bars wider */
+  :global(.bar-group) {
+    min-width: 180px !important;
+  }
+
+  /* Ensure the legend is visible */
+  :global(.chart-legend) {
+    margin-top: 20px;
+    padding-bottom: 20px;
+  }
+</style>

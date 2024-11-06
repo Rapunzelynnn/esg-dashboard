@@ -131,25 +131,25 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 8px; /* Reduced padding */
+    padding: 16px;
     box-sizing: border-box;
-    gap: 8px;
+    gap: 16px;
   }
 
   .profile-section {
-    flex: 0 0 25%;
+    flex: 0 0 35%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 0 16px; /* Added horizontal padding */
+    gap: 12px;
+    padding: 0 24px;
   }
 
   .analysis-section {
-    flex: 0 0 75%;
+    flex: 0 0 65%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 0 16px; /* Added horizontal padding */
+    gap: 12px;
+    padding: 0 24px;
   }
 
   .header-row {
@@ -157,35 +157,34 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 36px;
-    margin-bottom: 4px;
+    height: 48px;
   }
 
   .title {
-    font-size: 24px;
+    font-size: 32px;
     font-weight: bold;
     margin: 0;
   }
 
   .search-box {
-    width: 300px;
+    width: 360px;
   }
 
   .chart-nav {
     display: flex;
-    gap: 8px;
+    gap: 12px;
   }
 
   .nav-button {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 16px;
-    border-radius: 6px;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 8px;
     border: none;
     background: #f3f4f6;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 18px;
   }
 
   .nav-button.active {
@@ -195,8 +194,9 @@
 
   .content-card {
     flex: 1;
-    height: calc(100% - 40px);
-    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    min-height: 600px; /* Ensure minimum height */
   }
 
   .centered-message {
@@ -204,25 +204,34 @@
     justify-content: center;
     align-items: center;
     height: 100%;
+    font-size: 18px;
   }
 
   :global(.card) {
     height: 100%;
     margin: 0;
-    padding: 16px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
   }
 
   :global(.chart-content) {
     flex: 1;
-    height: 100%;
-    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 
-  /* Ensure charts expand to fill width */
+  /* Ensure charts take full space */
+  :global(.chart-container) {
+    height: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Make sure SVG elements scale properly */
   :global(.recharts-wrapper),
   :global(.recharts-surface) {
     width: 100% !important;
+    height: 100% !important;
   }
 </style>

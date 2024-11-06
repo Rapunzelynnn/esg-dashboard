@@ -121,3 +121,19 @@
         <div class="text-sm">Use the search bar above to find a company</div>
     </div>
 {/if}
+
+<!-- Update CompanyProfile.svelte -->
+<style>
+  /* Add these styles to your CompanyProfile component */
+  :global(.company-profile-container) {
+    min-height: 400px;
+  }
+
+  :global(.stock-chart-container) {
+    min-height: 200px;
+  }
+
+  :global(.esg-scores-container) {
+    min-height: 180px;
+  }
+</style>
