@@ -164,3 +164,24 @@ export interface ProcessedCompanyData extends Company {
   industryAvg?: number;
   industryStdDev?: number;
 }
+
+// Add the new types for gesture handling
+export type TouchCoordinates = {
+  x: number;
+  y: number;
+  clientX: number;
+  clientY: number;
+};
+
+// You might also want to add this type for better organization
+export type ChartDimensions = {
+  width: number;
+  height: number;
+  margin: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+};
+export type ViewMode = 'absolute' | 'relative';
