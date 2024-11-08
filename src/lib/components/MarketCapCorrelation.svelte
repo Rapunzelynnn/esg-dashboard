@@ -202,50 +202,62 @@ function handlePointClick(company: ProcessedCompanyData, event: Event) {
     {/each}
   </div>
 
-<!-- Chart Container -->
-<section 
-  class="relative chart-area" 
-  style="height: {height}px;"
-  role="region"
-  aria-label="ESG Score vs Market Cap Chart"
->
-  <button
-    class="absolute inset-0 w-full h-full transparent-button"
-    on:click={handleChartClick}
-    on:keydown={(e) => {
-      if (e.key === 'Escape') selectedCompany = null;
-    }}
-    aria-label="Clear selection"
+  <!-- Chart container -->
+  <section 
+    class="relative chart-area ml-12" 
+    style="height: {height}px;"
+    role="region"
+    aria-label="ESG Score vs Market Cap Chart"
   >
-    <div class="absolute inset-0" role="presentation">
-      <!-- Y-axis labels -->
-      <div 
-        class="absolute left-0 top-0 bottom-8 w-16" 
-        role="group" 
-        aria-label="Y-axis scale"
-      >
-        {#if viewMode === 'absolute'}
-          {#each [0, 20, 40, 60, 80, 100] as value}
-            <span
-              class="absolute right-0 text-sm text-gray-600 pr-2"
-              style="bottom: {(value / maxScore) * 100}%"
-              role="text"
-            >
-              {value}
-            </span>
-          {/each}
-        {:else}
-          {#each [-4, -2, 0, 2, 4] as value}
-            <span
-              class="absolute right-0 text-sm text-gray-600 pr-2"
-              style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
-              role="text"
-            >
-              {value}σ
-            </span>
-          {/each}
-        {/if}
-      </div>
+    <button
+      class="absolute inset-0 w-full h-full transparent-button"
+      on:click={handleChartClick}
+      on:keydown={(e) => {
+        if (e.key === 'Escape') selectedCompany = null;
+      }}
+      aria-label="Clear selection"
+    >
+      <div class="absolute inset-0" role="presentation">
+        <!-- Y-axis labels -->
+        <div 
+          class="absolute left-0 top-0 bottom-8 w-16"
+          role="group"
+          aria-label="Y-axis"
+        >
+          <!-- Y-axis scale labels -->
+          <div class="absolute right-0 h-full" role="group" aria-label="Y-axis scale">
+            {#if viewMode === 'absolute'}
+              {#each [0, 20, 40, 60, 80, 100] as value}
+                <span
+                  class="absolute right-0 text-sm text-gray-600 pr-2"
+                  style="bottom: {(value / maxScore) * 100}%"
+                  role="text"
+                >
+                  {value}
+                </span>
+              {/each}
+            {:else}
+              {#each [-4, -2, 0, 2, 4] as value}
+                <span
+                  class="absolute right-0 text-sm text-gray-600 pr-2"
+                  style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
+                  role="text"
+                >
+                  {value}σ
+                </span>
+              {/each}
+            {/if}
+          </div>
+        </div>
+        
+        <!-- Y-axis title - Moved outside the chart area -->
+        <div 
+          class="absolute text-sm text-gray-600"
+          style="left: -3rem; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: left top;"
+          role="text"
+        >
+          {viewMode === 'absolute' ? 'ESG Score' : 'ESG Score (Standard Deviations from Industry Mean)'}
+        </div>
 
       <!-- Grid lines -->
       <div class="absolute left-16 right-0 top-0 bottom-8" aria-hidden="true">
@@ -338,18 +350,12 @@ function handlePointClick(company: ProcessedCompanyData, event: Event) {
         {/each}
       </div>
 
-      <!-- Axes labels -->
+      <!-- X-axis label -->
       <span 
         class="absolute bottom-0 left-16 right-0 text-center text-sm text-gray-600"
         role="text"
       >
         Market Cap (Billions USD)
-      </span>
-      <span 
-        class="absolute left-2 top-1/2 -rotate-90 text-sm text-gray-600 whitespace-nowrap"
-        role="text"
-      >
-        {viewMode === 'absolute' ? 'ESG Score' : 'ESG Score (Standard Deviations from Industry Mean)'}
       </span>
     </div>
   </button>
