@@ -1,7 +1,9 @@
+<!-- $lib/componenets/StockPriceCorrelation.svelte -->
 <script lang="ts">
 import { fade } from 'svelte/transition';
 import type { Company, PriceData } from '$lib/types';
-import { Card } from '$lib/components/ui/card';
+import { selectedCompany as globalSelectedCompany } from '$lib/stores';
+import { onMount } from 'svelte';
 
 export let data: Company[] = [];
 export let priceData: Record<string, PriceData[]> = {};
@@ -18,11 +20,6 @@ let hoveredCompany: ProcessedCompany | null = null;
 let selectedMetric: 'total' | 'environmental' | 'social' | 'governance' = 'total';
 let yAxisScale = 'linear'; // 'linear' or 'log'
 
-// Get unique industries and create color scale
-$: industries = [...new Set(data.map(d => d.industryName))].sort();
-$: colorScale = new Map(industries.map((industry, i) => 
-  [industry, `hsl(${(i * 360) / industries.length}, 70%, 50%)`]
-));
 
 // Calculate price changes with proper date handling
 function calculatePriceChange(prices: PriceData[]): number | null {
@@ -69,6 +66,235 @@ $: xMax = Math.max(...processedData.map(d => getSelectedEsgScore(d)));
 $: yTicks = generateYAxisTicks(yMin, yMax);
 let yMin = -100;
 let yMax = 800;
+
+// Add categoryOrder constant (if not already present)
+const categoryOrder = [
+  'Technology & Communications',
+  'Financial Services',
+  'Industrial & Manufacturing',
+  'Consumer Products & Services',
+  'Energy & Utilities',
+  'Healthcare & Life Sciences',
+  'Materials'
+];
+
+// Industry category mapping with comprehensive coverage
+const industryCategories = {
+  'Technology & Communications': {
+    base: '#4F46E5', // indigo base
+    industries: [
+      { name: 'Software', shade: '#4F46E5' },
+      { name: 'IT Services', shade: '#6366F1' },
+      { name: 'Computers & Peripherals and Office Electronics', shade: '#818CF8' },
+      { name: 'Semiconductors & Semiconductor Equipment', shade: '#A5B4FC' },
+      { name: 'Electronic Equipment, Instruments & Components', shade: '#8B5CF6' },
+      { name: 'Communications Equipment', shade: '#7C3AED' },
+      { name: 'Telecommunication Services', shade: '#6D28D9' },
+      { name: 'Interactive Media, Services & Home Entertainment', shade: '#5B21B6' }
+    ]
+  },
+  'Financial Services': {
+    base: '#F59E0B', // amber base
+    industries: [
+      { name: 'Banks', shade: '#F59E0B' },
+      { name: 'Insurance', shade: '#D97706' },
+      { name: 'Diversified Financial Services and Capital Markets', shade: '#B45309' },
+      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#92400E' },
+      { name: 'Real Estate Management & Development', shade: '#78350F' },
+      { name: 'Trading Companies & Distributors', shade: '#B45309' }
+    ]
+  },
+  'Industrial & Manufacturing': {
+    base: '#EF4444', // red base
+    industries: [
+      { name: 'Aerospace & Defense', shade: '#EF4444' },
+      { name: 'Machinery and Electrical Equipment', shade: '#F87171' },
+      { name: 'Transportation and Transportation Infrastructure', shade: '#FCA5A5' },
+      { name: 'Construction & Engineering', shade: '#FECACA' },
+      { name: 'Building Products', shade: '#FEE2E2' },
+      { name: 'Construction Materials', shade: '#FEF2F2' },
+      { name: 'Containers & Packaging', shade: '#FFF1F2' },
+      { name: 'Electrical Components & Equipment', shade: '#FFE4E6' }
+    ]
+  },
+  'Consumer Products & Services': {
+    base: '#10B981', // emerald base
+    industries: [
+      { name: 'Textiles, Apparel & Luxury Goods', shade: '#059669' },
+      { name: 'Hotels, Resorts & Cruise Lines', shade: '#10B981' },
+      { name: 'Food & Staples Retailing', shade: '#047857' },
+      { name: 'Food Products', shade: '#065F46' },
+      { name: 'Beverages', shade: '#064E3B' },
+      { name: 'Restaurants & Leisure Facilities', shade: '#047857' },
+      { name: 'Media, Movies & Entertainment', shade: '#059669' },
+      { name: 'Retailing', shade: '#10B981' }
+    ]
+  },
+  'Energy & Utilities': {
+    base: '#8B5CF6', // purple base
+    industries: [
+      { name: 'Electric Utilities', shade: '#8B5CF6' },
+      { name: 'Multi and Water Utilities', shade: '#A78BFA' },
+      { name: 'Gas Utilities', shade: '#C4B5FD' },
+      { name: 'Oil & Gas Storage & Transportation', shade: '#DDD6FE' },
+      { name: 'Oil & Gas Refining & Marketing', shade: '#EDE9FE' },
+      { name: 'Oil & Gas Upstream & Integrated', shade: '#F5F3FF' },
+      { name: 'Energy Equipment & Services', shade: '#FAF5FF' }
+    ]
+  },
+  'Healthcare & Life Sciences': {
+    base: '#EC4899', // pink base
+    industries: [
+      { name: 'Health Care Equipment & Supplies', shade: '#EC4899' },
+      { name: 'Health Care Providers & Services', shade: '#F472B6' },
+      { name: 'Life Sciences Tools & Services', shade: '#F9A8D4' },
+      { name: 'Biotechnology', shade: '#FBCFE8' },
+      { name: 'Pharmaceuticals', shade: '#FCE7F3' },
+      { name: 'Personal Products', shade: '#FDF2F8' }
+    ]
+  },
+  'Materials': {
+    base: '#2DD4BF', // teal base
+    industries: [
+      { name: 'Chemicals', shade: '#2DD4BF' },
+      { name: 'Metals & Mining', shade: '#5EEAD4' },
+      { name: 'Steel', shade: '#99F6E4' },
+      { name: 'Casinos & Gaming', shade: '#B9F2E5' },
+      { name: 'Commercial Services & Supplies', shade: '#CCFBF1' }
+    ]
+  }
+};
+// Get categorized industries
+$: categorizedIndustries = new Set(
+  Object.values(industryCategories).flatMap(category => 
+    category.industries.map(industry => industry.name)
+  )
+);
+
+// Update industries computation
+$: industries = [...new Set(data.map(d => d.industryName))]
+  .filter(industry => categorizedIndustries.has(industry))
+  .sort((a, b) => {
+    const getCategoryForIndustry = (industryName: string): string => {
+      return Object.entries(industryCategories).find(([_, category]) => 
+        category.industries.some(i => i.name === industryName)
+      )?.[0] ?? '';
+    };
+
+    const categoryA = getCategoryForIndustry(a);
+    const categoryB = getCategoryForIndustry(b);
+
+    if (categoryA !== categoryB) {
+      return categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB);
+    }
+
+    const category = industryCategories[categoryA as keyof typeof industryCategories];
+    if (category) {
+      const indexA = category.industries.findIndex(i => i.name === a);
+      const indexB = category.industries.findIndex(i => i.name === b);
+      return indexA - indexB;
+    }
+
+    return a.localeCompare(b);
+  });
+
+// Add related industries calculation
+$: relevantIndustries = new Set<string>((() => {
+  if (!$globalSelectedCompany) return industries;
+  
+  const selectedCategory = Object.entries(industryCategories).find(([_, category]) => 
+    category.industries.some(i => i.name === $globalSelectedCompany.industryName)
+  )?.[0];
+
+  if (!selectedCategory) return new Set([$globalSelectedCompany.industryName]);
+
+  return industryCategories[selectedCategory as keyof typeof industryCategories]
+    .industries.map(i => i.name)
+    .filter(name => industries.includes(name));
+})());
+
+// Update color scale to use industry categories
+function getIndustryColor(industryName: string): string {
+  for (const [_, category] of Object.entries(industryCategories)) {
+    const industry = category.industries.find(i => i.name === industryName);
+    if (industry) {
+      return industry.shade;
+    }
+  }
+  return '#94A3B8';
+}
+
+$: colorScale = new Map(industries.map(industry => [
+  industry,
+  getIndustryColor(industry)
+]));
+
+// Add selection functions
+function selectAll() {
+  if ($globalSelectedCompany) {
+    selectedIndustries = new Set([...relevantIndustries]);
+  } else {
+    selectedIndustries = new Set(industries);
+  }
+}
+
+function clearAll() {
+  if ($globalSelectedCompany) {
+    selectedIndustries = new Set([$globalSelectedCompany.industryName]);
+  } else {
+    selectedIndustries = new Set();
+  }
+}
+
+function toggleIndustry(industry: string) {
+  selectedIndustries = new Set(selectedIndustries);
+  if (selectedIndustries.has(industry)) {
+    if ($globalSelectedCompany?.industryName === industry) return;
+    selectedIndustries.delete(industry);
+  } else {
+    selectedIndustries.add(industry);
+  }
+}
+
+let showDropdown = false;
+
+function handleDropdownClick(event: MouseEvent) {
+  event.stopPropagation();
+  showDropdown = !showDropdown;
+}
+
+// Initialize selected industries when component mounts or company changes
+$: if ($globalSelectedCompany) {
+  const relatedInds = [...relevantIndustries];
+  if (relatedInds.length > 0) {
+    selectedIndustries = new Set(relatedInds);
+  }
+}
+
+// Get visible industries for the dropdown
+$: visibleIndustries = $globalSelectedCompany 
+  ? [...relevantIndustries]
+  : industries;
+
+// Update industry filter based on search
+$: filteredIndustries = visibleIndustries
+  .filter(industry => industry.toLowerCase().includes(searchTerm.toLowerCase()));
+
+onMount(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (showDropdown) {
+      const dropdown = document.querySelector('.industry-dropdown');
+      if (!dropdown?.contains(event.target as Node)) {
+        showDropdown = false;
+      }
+    }
+  };
+
+  document.addEventListener('click', handleClickOutside);
+  return () => {
+    document.removeEventListener('click', handleClickOutside);
+  };
+});
 
 // Generate appropriate Y-axis ticks
 function generateYAxisTicks(min: number, max: number): number[] {
@@ -178,29 +404,103 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
   </div>
 
   <!-- Industry Filters -->
-  <div class="flex flex-wrap gap-2">
-    {#each industries as industry}
-      <button
-        class="px-3 py-1 text-sm rounded-full transition-all duration-200
-          {selectedIndustries.has(industry) ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200'}"
-        on:click={() => {
-          selectedIndustries = new Set(selectedIndustries);
-          if (selectedIndustries.has(industry)) {
-            selectedIndustries.delete(industry);
-          } else {
-            selectedIndustries.add(industry);
-          }
-        }}
+  <div class="flex flex-col space-y-2">
+    <!-- Control buttons and dropdown -->
+    <div class="flex flex-wrap gap-2 items-center">
+      <button 
+        class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
+        on:click={selectAll}
       >
-        <div class="flex items-center space-x-2">
+        Select All
+      </button>
+      <button 
+        class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
+        on:click={clearAll}
+      >
+        Clear All
+      </button>
+      
+      <!-- Dropdown button -->
+      <div class="relative">
+        <button
+          class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
+          on:click|stopPropagation={handleDropdownClick}
+        >
+          <span>More Industries</span>
+          <span class="text-xs">▼</span>
+        </button>
+
+        {#if showDropdown}
+          <div 
+            class="industry-dropdown absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
+            on:click|stopPropagation={() => {}}
+          >
+            <div class="p-4 space-y-4">
+              <input
+                type="text"
+                bind:value={searchTerm}
+                placeholder="Search industries..."
+                class="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+
+              {#each categoryOrder as category}
+                {@const categoryIndustries = industries.filter(i => 
+                  Object.entries(industryCategories).find(([cat, _]) => 
+                    cat === category
+                  )?.[1].industries.some(ci => ci.name === i)
+                )}
+                
+                {#if categoryIndustries.length > 0}
+                  <div class="space-y-2">
+                    <div class="text-sm font-semibold text-gray-500">{category}</div>
+                    <div class="space-y-1 pl-2">
+                      {#each categoryIndustries as industry}
+                        {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
+                          <button
+                            class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                            on:click={() => toggleIndustry(industry)}
+                          >
+                            <div class="flex items-center flex-1">
+                              <div
+                                class="w-2 h-2 rounded-full mr-2"
+                                style="background-color: {colorScale.get(industry)}"
+                              ></div>
+                              <span>{industry}</span>
+                            </div>
+                            {#if selectedIndustries.has(industry)}
+                              <span class="text-blue-500">✓</span>
+                            {/if}
+                          </button>
+                        {/if}
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Selected industries display -->
+    <div class="flex flex-wrap gap-2">
+      {#each [...selectedIndustries] as industry}
+        <button
+          class="px-3 py-1 text-sm rounded-full transition-all duration-200 flex items-center space-x-2
+            bg-gray-800 text-white hover:bg-gray-700
+            {$globalSelectedCompany?.industryName === industry ? 'ring-2 ring-blue-500' : ''}"
+          on:click={() => toggleIndustry(industry)}
+        >
           <div
             class="w-2 h-2 rounded-full"
             style="background-color: {colorScale.get(industry)}"
           ></div>
           <span>{industry}</span>
-        </div>
-      </button>
-    {/each}
+          <span class="text-xs ml-1">×</span>
+        </button>
+      {/each}
+    </div>
   </div>
 
   <!-- Chart Area -->
