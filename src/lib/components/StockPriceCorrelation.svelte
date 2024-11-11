@@ -5,69 +5,27 @@ import type { Company, PriceData } from '$lib/types';
 import { selectedCompany as globalSelectedCompany } from '$lib/stores';
 import { onMount } from 'svelte';
 
-export let data: Company[] = [];
-export let priceData: Record<string, PriceData[]> = {};
-export let expanded = false;
-
+// Types and Interfaces
 interface ProcessedCompany extends Company {
   priceChange: number;
 }
 
-// State management
+// Props
+export let data: Company[] = [];
+export let priceData: Record<string, PriceData[]> = {};
+export let expanded = false;
+
+// State Management
 let selectedIndustries = new Set<string>();
 let searchTerm = '';
 let hoveredCompany: ProcessedCompany | null = null;
 let selectedMetric: 'total' | 'environmental' | 'social' | 'governance' = 'total';
-let yAxisScale = 'linear'; // 'linear' or 'log'
-
-
-// Calculate price changes with proper date handling
-function calculatePriceChange(prices: PriceData[]): number | null {
-  if (!prices || prices.length < 2) return null;
-  
-  const sortedPrices = [...prices].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-
-  const firstPrice = sortedPrices[0].price;
-  const lastPrice = sortedPrices[sortedPrices.length - 1].price;
-  
-  return ((lastPrice - firstPrice) / firstPrice) * 100;
-}
-
-// Process data for visualization with improved filtering
-$: processedData = data
-  .map(company => {
-    const priceChange = priceData[company.symbol] 
-      ? calculatePriceChange(priceData[company.symbol]) ?? 0
-      : 0;
-    return {
-      ...company,
-      priceChange
-    };
-  })
-  .filter(company => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || 
-      company.fullName.toLowerCase().includes(searchLower) ||
-      company.symbol.toLowerCase().includes(searchLower);
-    const matchesIndustry = selectedIndustries.size === 0 || 
-      selectedIndustries.has(company.industryName);
-    return matchesSearch && matchesIndustry;
-  }) as ProcessedCompany[];
-
-// Calculate visualization scales
-$: {
-  const prices = processedData.map(d => d.priceChange);
-  yMin = Math.floor(Math.min(...prices) / 10) * 10;
-  yMax = Math.ceil(Math.max(...prices) / 10) * 10;
-}
-$: xMax = Math.max(...processedData.map(d => getSelectedEsgScore(d)));
-$: yTicks = generateYAxisTicks(yMin, yMax);
+let yAxisScale = 'linear';
+let showDropdown = false;
 let yMin = -100;
 let yMax = 800;
 
-// Add categoryOrder constant (if not already present)
+// Constants
 const categoryOrder = [
   'Technology & Communications',
   'Financial Services',
@@ -164,22 +122,135 @@ const industryCategories = {
     ]
   }
 };
-// Get categorized industries
+
+// Data Processing Functions
+function calculatePriceChange(prices: PriceData[]): number | null {
+  if (!prices || prices.length < 2) return null;
+  
+  const sortedPrices = [...prices].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  const firstPrice = sortedPrices[0].price;
+  const lastPrice = sortedPrices[sortedPrices.length - 1].price;
+  
+  return ((lastPrice - firstPrice) / firstPrice) * 100;
+}
+
+
+// Utility Functions
+function generateYAxisTicks(min: number, max: number): number[] {
+  const step = (max - min) / 8;
+  return Array.from({ length: 9 }, (_, i) => min + step * i);
+}
+
+function getSelectedEsgScore(company: Company): number {
+  switch (selectedMetric) {
+    case 'environmental': return company.esgScores.environmental.score;
+    case 'social': return company.esgScores.social.score;
+    case 'governance': return company.esgScores.governance.score;
+    default: return company.esgScores.total;
+  }
+}
+
+function formatPriceChange(value: number): string {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+}
+
+function getIndustryColor(industryName: string): string {
+  for (const [_, category] of Object.entries(industryCategories)) {
+    const industry = category.industries.find(i => i.name === industryName);
+    if (industry) return industry.shade;
+  }
+  return '#94A3B8';
+}
+
+function getYPosition(value: number): string {
+  if (yAxisScale === 'log' && value > 0) {
+    return `${((Math.log10(value) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin))) * 100}%`;
+  }
+  return `${((value - yMin) / (yMax - yMin)) * 100}%`;
+}
+
+// Industry Selection Functions
+function selectAll() {
+  selectedIndustries = new Set($globalSelectedCompany 
+    ? [...relevantIndustries]
+    : industries
+  );
+}
+
+function clearAll() {
+  selectedIndustries = new Set($globalSelectedCompany 
+    ? [$globalSelectedCompany.industryName]
+    : []
+  );
+}
+
+function toggleIndustry(industry: string) {
+  if ($globalSelectedCompany?.industryName === industry) return;
+  selectedIndustries = new Set(selectedIndustries);
+  selectedIndustries.has(industry) 
+    ? selectedIndustries.delete(industry)
+    : selectedIndustries.add(industry);
+}
+
+function handleDropdownClick(event: MouseEvent) {
+  event.stopPropagation();
+  showDropdown = !showDropdown;
+}
+
+// Reactive Declarations
+$: processedData = data
+  .map(company => ({
+    ...company,
+    priceChange: priceData[company.symbol] 
+      ? calculatePriceChange(priceData[company.symbol]) ?? 0
+      : 0
+  }))
+  .filter(company => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      company.fullName.toLowerCase().includes(searchLower) ||
+      company.symbol.toLowerCase().includes(searchLower);
+    const matchesIndustry = selectedIndustries.size === 0 || 
+      selectedIndustries.has(company.industryName);
+    return matchesSearch && matchesIndustry;
+  }) as ProcessedCompany[];
+
+$: {
+  const prices = processedData.map(d => d.priceChange);
+  yMin = Math.floor(Math.min(...prices) / 10) * 10;
+  yMax = Math.ceil(Math.max(...prices) / 10) * 10;
+}
+
+$: xMax = Math.max(...processedData.map(d => getSelectedEsgScore(d)));
+$: yTicks = generateYAxisTicks(yMin, yMax);
+
+$: statistics = processedData.length >= 3 ? {
+  stats: {
+    quartiles: calculateQuartiles(processedData)
+  }
+} : null;
+
+$: colorScale = new Map(industries.map(industry => [
+  industry,
+  getIndustryColor(industry)
+]));
+
 $: categorizedIndustries = new Set(
   Object.values(industryCategories).flatMap(category => 
     category.industries.map(industry => industry.name)
   )
 );
 
-// Update industries computation
 $: industries = [...new Set(data.map(d => d.industryName))]
   .filter(industry => categorizedIndustries.has(industry))
   .sort((a, b) => {
-    const getCategoryForIndustry = (industryName: string): string => {
-      return Object.entries(industryCategories).find(([_, category]) => 
+    const getCategoryForIndustry = (industryName: string) => 
+      Object.entries(industryCategories).find(([_, category]) => 
         category.industries.some(i => i.name === industryName)
       )?.[0] ?? '';
-    };
 
     const categoryA = getCategoryForIndustry(a);
     const categoryB = getCategoryForIndustry(b);
@@ -190,15 +261,13 @@ $: industries = [...new Set(data.map(d => d.industryName))]
 
     const category = industryCategories[categoryA as keyof typeof industryCategories];
     if (category) {
-      const indexA = category.industries.findIndex(i => i.name === a);
-      const indexB = category.industries.findIndex(i => i.name === b);
-      return indexA - indexB;
+      return category.industries.findIndex(i => i.name === a) - 
+             category.industries.findIndex(i => i.name === b);
     }
 
     return a.localeCompare(b);
   });
 
-// Add related industries calculation
 $: relevantIndustries = new Set<string>((() => {
   if (!$globalSelectedCompany) return industries;
   
@@ -213,55 +282,34 @@ $: relevantIndustries = new Set<string>((() => {
     .filter(name => industries.includes(name));
 })());
 
-// Update color scale to use industry categories
-function getIndustryColor(industryName: string): string {
-  for (const [_, category] of Object.entries(industryCategories)) {
-    const industry = category.industries.find(i => i.name === industryName);
-    if (industry) {
-      return industry.shade;
+$: if ($globalSelectedCompany) {
+  const relatedInds = [...relevantIndustries];
+  if (relatedInds.length > 0) {
+    selectedIndustries = new Set(relatedInds);
+  }
+}
+
+$: visibleIndustries = $globalSelectedCompany 
+  ? [...relevantIndustries]
+  : industries;
+
+$: filteredIndustries = visibleIndustries
+  .filter(industry => industry.toLowerCase().includes(searchTerm.toLowerCase()));
+
+// Lifecycle
+onMount(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (showDropdown) {
+      const dropdown = document.querySelector('.industry-dropdown');
+      if (!dropdown?.contains(event.target as Node)) {
+        showDropdown = false;
+      }
     }
-  }
-  return '#94A3B8';
-}
+  };
 
-$: colorScale = new Map(industries.map(industry => [
-  industry,
-  getIndustryColor(industry)
-]));
-
-// Add selection functions
-function selectAll() {
-  if ($globalSelectedCompany) {
-    selectedIndustries = new Set([...relevantIndustries]);
-  } else {
-    selectedIndustries = new Set(industries);
-  }
-}
-
-function clearAll() {
-  if ($globalSelectedCompany) {
-    selectedIndustries = new Set([$globalSelectedCompany.industryName]);
-  } else {
-    selectedIndustries = new Set();
-  }
-}
-
-function toggleIndustry(industry: string) {
-  selectedIndustries = new Set(selectedIndustries);
-  if (selectedIndustries.has(industry)) {
-    if ($globalSelectedCompany?.industryName === industry) return;
-    selectedIndustries.delete(industry);
-  } else {
-    selectedIndustries.add(industry);
-  }
-}
-
-let showDropdown = false;
-
-function handleDropdownClick(event: MouseEvent) {
-  event.stopPropagation();
-  showDropdown = !showDropdown;
-}
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+});
 
 // Initialize selected industries when component mounts or company changes
 $: if ($globalSelectedCompany) {
@@ -270,15 +318,6 @@ $: if ($globalSelectedCompany) {
     selectedIndustries = new Set(relatedInds);
   }
 }
-
-// Get visible industries for the dropdown
-$: visibleIndustries = $globalSelectedCompany 
-  ? [...relevantIndustries]
-  : industries;
-
-// Update industry filter based on search
-$: filteredIndustries = visibleIndustries
-  .filter(industry => industry.toLowerCase().includes(searchTerm.toLowerCase()));
 
 onMount(() => {
   const handleClickOutside = (event: MouseEvent) => {
@@ -296,74 +335,99 @@ onMount(() => {
   };
 });
 
-// Generate appropriate Y-axis ticks
-function generateYAxisTicks(min: number, max: number): number[] {
-  const step = (max - min) / 8;
-  return Array.from({ length: 9 }, (_, i) => min + step * i);
-}
-
-function getSelectedEsgScore(company: Company): number {
-  switch (selectedMetric) {
-    case 'environmental':
-      return company.esgScores.environmental.score;
-    case 'social':
-      return company.esgScores.social.score;
-    case 'governance':
-      return company.esgScores.governance.score;
-    default:
-      return company.esgScores.total;
-  }
-}
-
-function formatPriceChange(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
-}
 
 function getPointColor(priceChange: number, industry: string): string {
   return colorScale.get(industry) || '#808080';
 }
 
-// Calculate point position
-function getYPosition(value: number): string {
-  if (yAxisScale === 'log' && value > 0) {
-    return `${((Math.log10(value) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin))) * 100}%`;
-  }
-  return `${((value - yMin) / (yMax - yMin)) * 100}%`;
+
+function calculateR2(data: ProcessedCompany[], polynomial: any): number {
+  const xs = data.map(d => getSelectedEsgScore(d));
+  const ys = data.map(d => d.priceChange);
+  
+  const yMean = ys.reduce((sum, y) => sum + y, 0) / ys.length;
+  const predicted = xs.map(x => 
+    polynomial.coeffs.reduce((sum: number, coeff: number, power: number) => 
+      sum + coeff * Math.pow(x, power), 0)
+  );
+  
+  const ssRes = ys.reduce((sum, y, i) => sum + Math.pow(y - predicted[i], 2), 0);
+  const ssTot = ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
+  
+  return 1 - (ssRes / ssTot);
 }
 
-// Calculate trend line
-$: trendLineData = calculateTrendLine(processedData);
 
-function calculateTrendLine(data: ProcessedCompany[]) {
-  if (data.length < 2) return null;
-
-  const xValues = data.map(d => getSelectedEsgScore(d));
-  const yValues = data.map(d => d.priceChange);
-
-  const n = data.length;
-  const sumX = xValues.reduce((a, b) => a + b, 0);
-  const sumY = yValues.reduce((a, b) => a + b, 0);
-  const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
-  const sumXX = xValues.reduce((sum, x) => sum + x * x, 0);
-
-  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-  const correlation = calculateCorrelation(xValues, yValues);
-
-  return { slope, intercept, correlation };
+function calculateQuartiles(data: ProcessedCompany[]) {
+  const sortedEsg = [...data].sort((a, b) => getSelectedEsgScore(a) - getSelectedEsgScore(b));
+  const sortedPrice = [...data].sort((a, b) => a.priceChange - b.priceChange);
+  
+  return {
+    esg: {
+      min: getSelectedEsgScore(sortedEsg[0]),
+      max: getSelectedEsgScore(sortedEsg[sortedEsg.length - 1])
+    },
+    price: {
+      min: sortedPrice[0].priceChange,
+      max: sortedPrice[sortedPrice.length - 1].priceChange
+    }
+  };
 }
 
-function calculateCorrelation(xValues: number[], yValues: number[]): number {
-  const n = xValues.length;
-  const sumX = xValues.reduce((a, b) => a + b, 0);
-  const sumY = yValues.reduce((a, b) => a + b, 0);
-  const sumXY = xValues.reduce((sum, x, i) => sum + x * yValues[i], 0);
-  const sumXX = xValues.reduce((sum, x) => sum + x * x, 0);
-  const sumYY = yValues.reduce((sum, y) => sum + y * y, 0);
+// Add functions to calculate data insights
+function calculateDataInsights(data: ProcessedCompany[]) {
+  if (data.length === 0) return null;
 
-  return (n * sumXY - sumX * sumY) / 
-    Math.sqrt((n * sumXX - sumX * sumX) * (n * sumYY - sumY * sumY));
+  const esgScores = data.map(d => getSelectedEsgScore(d));
+  const priceChanges = data.map(d => d.priceChange);
+
+  // Calculate ESG score clusters
+  const esgMin = Math.min(...esgScores);
+  const esgMax = Math.max(...esgScores);
+  const esgRange = `${Math.floor(esgMin)}-${Math.ceil(esgMax)}`;
+
+  // Calculate price change ranges
+  const priceMin = Math.min(...priceChanges);
+  const priceMax = Math.max(...priceChanges);
+  const priceRange = `${priceMin.toFixed(1)}% and ${priceMax.toFixed(1)}%`;
+
+  // Calculate performance tendency
+  const highEsgCompanies = data.filter(d => getSelectedEsgScore(d) > 60);
+  const highEsgAvgPerformance = highEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / highEsgCompanies.length;
+  const lowEsgCompanies = data.filter(d => getSelectedEsgScore(d) <= 60);
+  const lowEsgAvgPerformance = lowEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / lowEsgCompanies.length;
+  
+  const performanceTrend = highEsgAvgPerformance > lowEsgAvgPerformance ? 'positive' : 'negative';
+
+  // Calculate variability
+  const correlation = Math.abs(calculateCorrelation(esgScores, priceChanges));
+  const predictiveStrength = correlation > 0.5 ? 'strong' : correlation > 0.3 ? 'moderate' : 'weak';
+
+  return {
+    esgRange,
+    priceRange,
+    performanceTrend,
+    predictiveStrength
+  };
 }
+
+// Add correlation calculation if not already present
+function calculateCorrelation(xs: number[], ys: number[]): number {
+  const xMean = xs.reduce((a, b) => a + b) / xs.length;
+  const yMean = ys.reduce((a, b) => a + b) / ys.length;
+  
+  const numerator = xs.reduce((sum, x, i) => sum + (x - xMean) * (ys[i] - yMean), 0);
+  const denominator = Math.sqrt(
+    xs.reduce((sum, x) => sum + Math.pow(x - xMean, 2), 0) *
+    ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0)
+  );
+  
+  return numerator / denominator;
+}
+
+// Add reactive declaration for insights
+$: insights = calculateDataInsights(processedData);
+
 </script>
 
 <div class="w-full space-y-4">
@@ -376,7 +440,7 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
     </div>
     
     <div class="flex flex-col sm:flex-row gap-2">
-      <select
+      <!-- <select
         bind:value={selectedMetric}
         class="px-3 py-1 border rounded-lg bg-white"
       >
@@ -384,15 +448,7 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
         <option value="environmental">Environmental Score</option>
         <option value="social">Social Score</option>
         <option value="governance">Governance Score</option>
-      </select>
-      
-      <select
-        bind:value={yAxisScale}
-        class="px-3 py-1 border rounded-lg bg-white"
-      >
-        <option value="linear">Linear Scale</option>
-        <option value="log">Log Scale</option>
-      </select>
+      </select> -->
       
       <input
         type="text"
@@ -534,18 +590,6 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
           </div>
         {/each}
 
-        <!-- Trend line -->
-        {#if trendLineData}
-          <div
-            class="absolute w-full h-0 border-t-2 border-gray-400 border-dashed"
-            style="
-              bottom: {getYPosition(trendLineData.intercept)}%;
-              transform: rotate({Math.atan(trendLineData.slope) * (180 / Math.PI)}deg);
-              transform-origin: left bottom;
-            "
-          ></div>
-        {/if}
-
         <!-- Data points -->
         {#each processedData as company}
           {@const esgScore = getSelectedEsgScore(company)}
@@ -595,7 +639,8 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
 
       <!-- Axis Labels -->
       <div class="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-600 font-medium">
-        {selectedMetric === 'total' ? 'ESG Score' : `${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)} Score`}
+        {selectedMetric === 'total' ? 'ESG Score' : 
+          `${String(selectedMetric)[0].toUpperCase()}${String(selectedMetric).substring(1)} Score`}
       </div>
       <div class="absolute left-2 top-1/2 -rotate-90 text-sm text-gray-600 font-medium whitespace-nowrap">
         Price Change (%)
@@ -603,31 +648,52 @@ function calculateCorrelation(xValues: number[], yValues: number[]): number {
     </div>
   </div>
 
-  <!-- Statistics Panel -->
+  <!-- Analysis and Statistics Panel -->
   {#if processedData.length > 0}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-      <div class="bg-gray-50 p-3 rounded-lg">
-        <div class="text-gray-600">Companies Shown</div>
-        <div class="font-semibold">{processedData.length}</div>
-      </div>
-      {#if trendLineData}
-        <div class="bg-gray-50 p-3 rounded-lg">
-          <div class="text-gray-600">Correlation</div>
-          <div class="font-semibold">{trendLineData.correlation.toFixed(3)}</div>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
+      <!-- Analysis Summary -->
+      {#if insights}
+        <div class="lg:col-span-3 bg-gray-50 p-4 rounded-lg">
+          <h3 class="text-xl font-semibold mb-4">Analysis Summary</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-4">
+              <div class="text-lg">
+                Most companies clustering between {insights.esgRange} ESG scores
+              </div>
+              <div class="text-lg">
+                Price changes mostly falling between {insights.priceRange}
+              </div>
+            </div>
+            <!-- Right Column -->
+            <div class="space-y-4">
+              <div class="text-lg">
+                {insights.performanceTrend === 'positive'
+                  ? 'A positive tendency for better price performance in companies with higher ESG scores'
+                  : 'No clear positive correlation between ESG scores and price performance'}
+              </div>
+              <div class="text-lg">
+                High variability showing {insights.predictiveStrength} predictive power of ESG scores for stock performance
+              </div>
+            </div>
+          </div>
         </div>
       {/if}
-      <div class="bg-gray-50 p-3 rounded-lg">
-        <div class="text-gray-600">Average Price Change</div>
-        <div class="font-semibold">
-          {formatPriceChange(processedData.reduce((sum, co) => sum + co.priceChange, 0) / 
-            processedData.length)}
-        </div>
-      </div>
-      <div class="bg-gray-50 p-3 rounded-lg">
-        <div class="text-gray-600">Average ESG Score</div>
-        <div class="font-semibold">
-          {(processedData.reduce((sum, co) => sum + getSelectedEsgScore(co), 0) / 
-            processedData.length).toFixed(1)}
+
+
+      <!-- Statistics -->
+      <div class="lg:col-span-1 space-y-3">
+        {#if statistics?.stats?.quartiles}
+          <div class="bg-gray-50 p-3 rounded-lg">
+            <div class="text-gray-600">ESG Score Range</div>
+            <div class="font-semibold">
+              {statistics.stats.quartiles.esg.min?.toFixed(1) ?? '0'} - {statistics.stats.quartiles.esg.max?.toFixed(1) ?? '0'}
+            </div>
+          </div>
+        {/if}
+        <div class="bg-gray-50 p-3 rounded-lg">
+          <div class="text-gray-600">Sample Size</div>
+          <div class="font-semibold">{processedData.length}</div>
         </div>
       </div>
     </div>
