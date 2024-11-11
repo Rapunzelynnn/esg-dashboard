@@ -147,12 +147,7 @@
   $: filteredIndustries = industries.filter(industry => 
     industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  $: groupedIndustries = filteredIndustries.reduce((acc, industry) => {
-    const firstLetter = industry[0].toUpperCase();
-    if (!acc[firstLetter]) acc[firstLetter] = [];
-    acc[firstLetter].push(industry);
-    return acc;
-  }, {} as Record<string, string[]>);
+
   $: sortedGroups = Object.keys(groupedIndustries).sort();
 
   // Sorted industry data with highlighted industry first
@@ -380,6 +375,31 @@ $: if ($selectedCompany && industries.length > 0) {
     selectedIndustries = new Set(industries);
     initialized = true;
   }
+  // New function to get category for an industry
+  function getIndustryCategory(industryName: string): string {
+    for (const [category, industries] of Object.entries(industryCategories)) {
+      if (industries.includes(industryName)) {
+        return category;
+      }
+    }
+    return 'Other'; // Fallback category
+  }
+
+  // New reactive declaration to group industries by category
+  $: groupedIndustries = filteredIndustries.reduce((acc, industry) => {
+    const category = getIndustryCategory(industry);
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(industry);
+    return acc;
+  }, {} as Record<string, string[]>);
+
+  // Get sorted categories (maintaining the order from industryCategories)
+  $: sortedCategories = Object.keys(industryCategories).filter(category => 
+    groupedIndustries[category] && groupedIndustries[category].length > 0
+  );
+
 </script>
 
 <svelte:window on:click={handleClickOutside} />
@@ -413,10 +433,10 @@ $: if ($selectedCompany && industries.length > 0) {
               {#if filteredIndustries.length === 0}
                 <div class="p-2 text-gray-500">No industries found</div>
               {:else}
-                {#each sortedGroups as letter}
-                  <div class="mb-2">
-                    <div class="px-2 py-1 text-sm font-semibold text-gray-500">{letter}</div>
-                    {#each groupedIndustries[letter] as industry}
+                {#each sortedCategories as category}
+                  <div class="mb-4">
+                    <div class="px-2 py-1 text-sm font-semibold text-gray-700 bg-gray-100">{category}</div>
+                    {#each groupedIndustries[category].sort() as industry}
                       <button
                         class="w-full px-2 py-1 text-left hover:bg-gray-100 flex items-center"
                         on:click|stopPropagation={() => toggleIndustry(industry)}
@@ -426,11 +446,31 @@ $: if ($selectedCompany && industries.length > 0) {
                             ✓
                           {/if}
                         </span>
-                        <span>{industry}</span>
+                        <span class="text-sm">{industry}</span>
                       </button>
                     {/each}
                   </div>
                 {/each}
+
+                <!-- Handle any industries that don't match a category -->
+                {#if groupedIndustries['Other'] && groupedIndustries['Other'].length > 0}
+                  <div class="mb-4">
+                    <div class="px-2 py-1 text-sm font-semibold text-gray-700 bg-gray-100">Other</div>
+                    {#each groupedIndustries['Other'].sort() as industry}
+                      <button
+                        class="w-full px-2 py-1 text-left hover:bg-gray-100 flex items-center"
+                        on:click|stopPropagation={() => toggleIndustry(industry)}
+                      >
+                        <span class="w-4 h-4 mr-2 border flex items-center justify-center">
+                          {#if selectedIndustries.has(industry)}
+                            ✓
+                          {/if}
+                        </span>
+                        <span class="text-sm">{industry}</span>
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
               {/if}
             </div>
           </div>
