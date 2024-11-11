@@ -598,11 +598,13 @@ $: insights = calculateDataInsights(processedData);
             style="
               left: {(esgScore / xMax) * 100}%;
               bottom: {getYPosition(company.priceChange)};
-              width: {expanded ? '8px' : '6px'};
-              height: {expanded ? '8px' : '6px'};
+              width: {company.symbol === $globalSelectedCompany?.symbol ? '12px' : expanded ? '8px' : '6px'};
+              height: {company.symbol === $globalSelectedCompany?.symbol ? '12px' : expanded ? '8px' : '6px'};
               background-color: {getPointColor(company.priceChange, company.industryName)};
               transform: translate(-50%, -50%);
-              opacity: 0.7;
+              opacity: {company.symbol === $globalSelectedCompany?.symbol ? '1' : '0.7'};
+              z-index: {company.symbol === $globalSelectedCompany?.symbol ? '10' : '0'};
+              border: {company.symbol === $globalSelectedCompany?.symbol ? '2px solid #3B82F6' : 'none'};
             "
             on:mouseenter={() => hoveredCompany = company}
             on:mouseleave={() => hoveredCompany = null}
@@ -611,7 +613,7 @@ $: insights = calculateDataInsights(processedData);
               <div
                 class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
                   bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72
-                  text-left pointer-events-none z-10"
+                  text-left pointer-events-none z-20"
                 transition:fade
               >
                 <div class="font-bold">{company.fullName}</div>
