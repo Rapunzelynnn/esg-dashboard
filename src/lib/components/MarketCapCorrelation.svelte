@@ -139,13 +139,6 @@ function formatMarketCap(value: number): string {
     return `$${value.toFixed(2)}`;
 }
 
-function formatScore(company: any): string {
-  if (viewMode === 'absolute') {
-    return company.esgScore.toFixed(1);
-  }
-  return `${company.relativeESG.toFixed(2)} σ (${company.esgScore.toFixed(1)})`;
-}
-
 function handleChartClick() {
   selectedCompany = null;
 }
@@ -164,112 +157,125 @@ function handlePointClick(company: ProcessedCompanyData, event: Event) {
 }
 
 const categoryOrder = [
-  'Technology & Communications',
-  'Financial Services',
-  'Industrial & Manufacturing',
-  'Consumer Products & Services',
-  'Energy & Utilities',
-  'Healthcare & Life Sciences',
-  'Materials'
+  'Information Technology',
+  'Communication Services',
+  'Financials',
+  'Industrials',
+  'Consumer Discretionary',
+  'Consumer Staples',
+  'Health Care',
+  'Energy',
+  'Materials',
+  'Utilities'
 ];
-// First, let's define the proper types
-interface IndustryInfo {
-  name: string;
-  shade: string;
-}
 
-interface CategoryInfo {
-  base: string;
-  industries: IndustryInfo[];
-}
-
-type IndustryCategoriesType = {
-  [key: string]: CategoryInfo;
-}
-
-// Industry category mapping with comprehensive coverage
+// Industry category mapping with color schemes
 const industryCategories = {
-  'Technology & Communications': {
-    base: '#4F46E5', // indigo base
+  'Information Technology': {
+    base: '#2563EB', // blue base
     industries: [
-      { name: 'Software', shade: '#4F46E5' },
-      { name: 'IT Services', shade: '#6366F1' },
-      { name: 'Computers & Peripherals and Office Electronics', shade: '#818CF8' },
-      { name: 'Semiconductors & Semiconductor Equipment', shade: '#A5B4FC' },
-      { name: 'Electronic Equipment, Instruments & Components', shade: '#8B5CF6' },
-      { name: 'Communications Equipment', shade: '#7C3AED' },
-      { name: 'Telecommunication Services', shade: '#6D28D9' },
-      { name: 'Interactive Media, Services & Home Entertainment', shade: '#5B21B6' }
+      { name: 'Software', shade: '#2563EB' },         // blue-600
+      { name: 'IT Services', shade: '#1D4ED8' },      // blue-700
+      { name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },  // blue-800
+      { name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },       // blue-500
+      { name: 'Communications Equipment', shade: '#60A5FA' },      // blue-400
+      { name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }   // blue-600
     ]
   },
-  'Financial Services': {
-    base: '#F59E0B', // amber base
+  'Communication Services': {
+    base: '#EA580C', // orange base
     industries: [
-      { name: 'Banks', shade: '#F59E0B' },
-      { name: 'Insurance', shade: '#D97706' },
-      { name: 'Diversified Financial Services and Capital Markets', shade: '#B45309' },
-      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#92400E' },
-      { name: 'Real Estate Management & Development', shade: '#78350F' },
-      { name: 'Trading Companies & Distributors', shade: '#B45309' }
+      { name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' }, // orange-600
+      { name: 'Media, Movies & Entertainment', shade: '#C2410C' },                    // orange-700
+      { name: 'Telecommunication Services', shade: '#9A3412' }                        // orange-800
     ]
   },
-  'Industrial & Manufacturing': {
-    base: '#EF4444', // red base
+  'Financials': {
+    base: '#059669', // emerald base
     industries: [
-      { name: 'Aerospace & Defense', shade: '#EF4444' },
-      { name: 'Machinery and Electrical Equipment', shade: '#F87171' },
-      { name: 'Transportation and Transportation Infrastructure', shade: '#FCA5A5' },
-      { name: 'Construction & Engineering', shade: '#FECACA' },
-      { name: 'Building Products', shade: '#FEE2E2' },
-      { name: 'Construction Materials', shade: '#FEF2F2' },
-      { name: 'Containers & Packaging', shade: '#FFF1F2' },
-      { name: 'Electrical Components & Equipment', shade: '#FFE4E6' }
+      { name: 'Banks', shade: '#059669' },                // emerald-600
+      { name: 'Diversified Financial Services and Capital Markets', shade: '#047857' }, // emerald-700
+      { name: 'Insurance', shade: '#065F46' },            // emerald-800
+      { name: 'Real Estate Management & Development', shade: '#10B981' },  // emerald-500
+      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }  // emerald-400
     ]
   },
-  'Consumer Products & Services': {
-    base: '#10B981', // emerald base
+  'Industrials': {
+    base: '#DC2626', // red base
     industries: [
-      { name: 'Textiles, Apparel & Luxury Goods', shade: '#059669' },
-      { name: 'Hotels, Resorts & Cruise Lines', shade: '#10B981' },
-      { name: 'Food & Staples Retailing', shade: '#047857' },
-      { name: 'Food Products', shade: '#065F46' },
-      { name: 'Beverages', shade: '#064E3B' },
-      { name: 'Restaurants & Leisure Facilities', shade: '#047857' },
-      { name: 'Media, Movies & Entertainment', shade: '#059669' },
-      { name: 'Retailing', shade: '#10B981' }
+      { name: 'Aerospace & Defense', shade: '#DC2626' },        // red-600
+      { name: 'Airlines', shade: '#B91C1C' },                   // red-700
+      { name: 'Building Products', shade: '#991B1B' },          // red-800
+      { name: 'Machinery and Electrical Equipment', shade: '#EF4444' },    // red-500
+      { name: 'Electrical Components & Equipment', shade: '#F87171' },     // red-400
+      { name: 'Trading Companies & Distributors', shade: '#DC2626' },      // red-600
+      { name: 'Professional Services', shade: '#B91C1C' },                 // red-700
+      { name: 'Commercial Services & Supplies', shade: '#991B1B' },        // red-800
+      { name: 'Construction & Engineering', shade: '#EF4444' },            // red-500
+      { name: 'Transportation and Transportation Infrastructure', shade: '#F87171' }, // red-400
+      { name: 'Auto Components', shade: '#DC2626' }                        // red-600
     ]
   },
-  'Energy & Utilities': {
-    base: '#8B5CF6', // purple base
+  'Consumer Discretionary': {
+    base: '#D97706', // amber base
     industries: [
-      { name: 'Electric Utilities', shade: '#8B5CF6' },
-      { name: 'Multi and Water Utilities', shade: '#A78BFA' },
-      { name: 'Gas Utilities', shade: '#C4B5FD' },
-      { name: 'Oil & Gas Storage & Transportation', shade: '#DDD6FE' },
-      { name: 'Oil & Gas Refining & Marketing', shade: '#EDE9FE' },
-      { name: 'Oil & Gas Upstream & Integrated', shade: '#F5F3FF' },
-      { name: 'Energy Equipment & Services', shade: '#FAF5FF' }
+      { name: 'Automobiles', shade: '#D97706' },        // amber-600
+      { name: 'Retailing', shade: '#B45309' },          // amber-700
+      { name: 'Restaurants & Leisure Facilities', shade: '#92400E' },  // amber-800
+      { name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },    // amber-500
+      { name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' }, // amber-400
+      { name: 'Homebuilding', shade: '#D97706' },        // amber-600
+      { name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },  // amber-700
+      { name: 'Casinos & Gaming', shade: '#92400E' },    // amber-800
+      { name: 'Household Durables', shade: '#F59E0B' }   // amber-500
     ]
   },
-  'Healthcare & Life Sciences': {
-    base: '#EC4899', // pink base
+  'Consumer Staples': {
+    base: '#DB2777', // pink base
     industries: [
-      { name: 'Health Care Equipment & Supplies', shade: '#EC4899' },
-      { name: 'Health Care Providers & Services', shade: '#F472B6' },
-      { name: 'Life Sciences Tools & Services', shade: '#F9A8D4' },
-      { name: 'Biotechnology', shade: '#FBCFE8' },
-      { name: 'Pharmaceuticals', shade: '#FCE7F3' },
-      { name: 'Personal Products', shade: '#FDF2F8' }
+      { name: 'Food Products', shade: '#DB2777' },          // pink-600
+      { name: 'Food & Staples Retailing', shade: '#BE185D' }, // pink-700
+      { name: 'Household Products', shade: '#9D174D' },     // pink-800
+      { name: 'Personal Products', shade: '#EC4899' },      // pink-500
+      { name: 'Beverages', shade: '#F472B6' },             // pink-400
+      { name: 'Tobacco', shade: '#DB2777' }                // pink-600
+    ]
+  },
+  'Health Care': {
+    base: '#0284C7', // sky blue base
+    industries: [
+      { name: 'Biotechnology', shade: '#0284C7' },        // sky-600
+      { name: 'Pharmaceuticals', shade: '#0369A1' },      // sky-700
+      { name: 'Health Care Equipment & Supplies', shade: '#075985' },  // sky-800
+      { name: 'Health Care Providers & Services', shade: '#0EA5E9' },  // sky-500
+      { name: 'Life Sciences Tools & Services', shade: '#38BDF8' }     // sky-400
+    ]
+  },
+  'Energy': {
+    base: '#0D9488', // teal base
+    industries: [
+      { name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },  // teal-600
+      { name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' }, // teal-700
+      { name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },   // teal-800
+      { name: 'Energy Equipment & Services', shade: '#14B8A6' }       // teal-500
     ]
   },
   'Materials': {
-    base: '#2DD4BF', // teal base
+    base: '#65A30D', // lime base
     industries: [
-      { name: 'Chemicals', shade: '#2DD4BF' },
-      { name: 'Metals & Mining', shade: '#5EEAD4' },
-      { name: 'Steel', shade: '#99F6E4' },
-      { name: 'Casinos & Gaming', shade: '#B9F2E5' },
-      { name: 'Commercial Services & Supplies', shade: '#CCFBF1' }
+      { name: 'Chemicals', shade: '#65A30D' },           // lime-600
+      { name: 'Construction Materials', shade: '#4D7C0F' }, // lime-700
+      { name: 'Metals & Mining', shade: '#3F6212' },     // lime-800
+      { name: 'Containers & Packaging', shade: '#84CC16' }, // lime-500
+      { name: 'Steel', shade: '#A3E635' }               // lime-400
+    ]
+  },
+  'Utilities': {
+    base: '#CA8A04', // yellow base
+    industries: [
+      { name: 'Electric Utilities', shade: '#CA8A04' },         // yellow-600
+      { name: 'Gas Utilities', shade: '#A16207' },              // yellow-700
+      { name: 'Multi and Water Utilities', shade: '#854D0E' }   // yellow-800
     ]
   }
 };
