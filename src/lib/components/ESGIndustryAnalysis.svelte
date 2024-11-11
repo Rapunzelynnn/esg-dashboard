@@ -2,7 +2,6 @@
 <script lang="ts">
   import type { Company } from '$lib/types';
   import { selectedCompany } from '$lib/stores';
-  import { fade } from 'svelte/transition';
 
   // Props
   export let data: Company[] = [];
@@ -247,9 +246,15 @@
     selectedIndustries = new Set(selectedIndustries);
   }
 
-
-
-  
+  // Add this helper function to find the category for an industry
+  function findIndustryCategory(industryName: string): string | null {
+    for (const [category, industries] of Object.entries(industryCategories)) {
+      if (industries.includes(industryName)) {
+        return category;
+      }
+    }
+    return null;
+  }
 
   // Initial load handling
   $: if ($selectedCompany && industries.length > 0) {
@@ -263,33 +268,33 @@
     initialized = true;
   }
 
-
-
-
-   // Function to get related industries for the selected company
+  // Updated getRelatedIndustries function
   function getRelatedIndustries(industryName: string): Set<string> {
-    const defaultCount = 5;
     const relatedIndustries = new Set<string>();
     
-    if (!industryName) return new Set(allIndustryData.slice(0, defaultCount).map(d => d.industryName));
+    if (!industryName) return new Set(allIndustryData.slice(0, 5).map(d => d.industryName));
     
     // Add the company's own industry first
     relatedIndustries.add(industryName);
     
-    // Add related industries from the mapping
-    if (industryCategories[industryName]) {
-      industryCategories[industryName].forEach(industry => {
+    // Find the parent category of the industry
+    const parentCategory = findIndustryCategory(industryName);
+    
+    if (parentCategory && industryCategories[parentCategory]) {
+      // Add all industries from the same category that exist in our data
+      industryCategories[parentCategory].forEach(industry => {
         if (industries.includes(industry)) {
           relatedIndustries.add(industry);
         }
       });
     }
     
-    // If we need more industries, add top performers
-    if (relatedIndustries.size < defaultCount) {
+    // If we still have very few industries (e.g., if category lookup failed),
+    // fall back to adding top performers
+    if (relatedIndustries.size < 3) {
       allIndustryData
         .filter(d => !relatedIndustries.has(d.industryName))
-        .slice(0, defaultCount - relatedIndustries.size)
+        .slice(0, 5 - relatedIndustries.size)
         .forEach(d => relatedIndustries.add(d.industryName));
     }
     
