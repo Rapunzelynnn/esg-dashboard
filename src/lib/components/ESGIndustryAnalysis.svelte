@@ -57,60 +57,82 @@
   };
 
     const industryCategories: Record<string, string[]> = {
-    // Technology & Electronics
-    'Software': [
+     'Energy': [
+      'Oil & Gas Upstream & Integrated',
+      'Oil & Gas Storage & Transportation',
+      'Oil & Gas Refining & Marketing',
+      'Energy Equipment & Services'
+    ],
+    'Materials': [
+      'Chemicals',
+      'Construction Materials',
+      'Metals & Mining',
+      'Containers & Packaging',
+      'Steel'
+    ],
+    'Industrials': [
+      'Aerospace & Defense',
+      'Airlines',
+      'Building Products',
+      'Machinery and Electrical Equipment',
+      'Electrical Components & Equipment',
+      'Trading Companies & Distributors',
+      'Professional Services',
+      'Commercial Services & Supplies',
+      'Construction & Engineering',
+      'Transportation and Transportation Infrastructure',
+      'Auto Components'
+    ],
+    'Consumer Discretionary': [
+      'Automobiles',
+      'Retailing',
+      'Restaurants & Leisure Facilities',
+      'Hotels, Resorts & Cruise Lines',
+      'Leisure Equipment & Products and Consumer Electronics',
+      'Homebuilding',
+      'Textiles, Apparel & Luxury Goods',
+      'Casinos & Gaming',
+      'Household Durables'
+    ],
+    'Consumer Staples': [
+      'Food Products',
+      'Food & Staples Retailing',
+      'Household Products',
+      'Personal Products',
+      'Beverages',
+      'Tobacco'
+    ],
+    'Health Care': [
+      'Biotechnology',
+      'Pharmaceuticals',
+      'Health Care Equipment & Supplies',
+      'Health Care Providers & Services',
+      'Life Sciences Tools & Services'
+    ],
+    'Financials': [
+      'Banks',
+      'Diversified Financial Services and Capital Markets',
+      'Insurance',
+      'Real Estate Management & Development',
+      'Equity Real Estate Investment Trusts (REITs)'
+    ],
+    'Information Technology': [
+      'Semiconductors & Semiconductor Equipment',
       'Software',
       'IT Services',
       'Computers & Peripherals and Office Electronics',
-      'Semiconductors & Semiconductor Equipment',
+      'Communications Equipment',
       'Electronic Equipment, Instruments & Components'
     ],
-    'IT Services': [
-      'IT Services',
-      'Software',
-      'Telecommunication Services',
-      'Electronic Equipment, Instruments & Components'
+    'Communication Services': [
+      'Interactive Media, Services & Home Entertainment',
+      'Media, Movies & Entertainment',
+      'Telecommunication Services'
     ],
-
-    // Financial Services & Real Estate
-    'Banks': [
-      'Banks',
-      'Insurance',
-      'Diversified Financial Services and Capital Markets',
-      'Equity Real Estate Investment Trusts (REITs)',
-      'Real Estate Management & Development'
-    ],
-    'Insurance': [
-      'Insurance',
-      'Banks',
-      'Diversified Financial Services and Capital Markets',
-      'Health Care Providers & Services'
-    ],
-
-    // Healthcare & Life Sciences
-    'Health Care Equipment & Supplies': [
-      'Health Care Equipment & Supplies',
-      'Health Care Providers & Services',
-      'Biotechnology',
-      'Pharmaceuticals',
-      'Life Sciences Tools & Services'
-    ],
-    
-    // Energy & Utilities
-    'Electric Utilities': [
+    'Utilities': [
       'Electric Utilities',
-      'Multi and Water Utilities',
       'Gas Utilities',
-      'Oil & Gas Storage & Transportation',
-      'Energy Equipment & Services'
-    ],
-
-    // Industrial & Manufacturing
-    'Aerospace & Defense': [
-      'Aerospace & Defense',
-      'Machinery and Electrical Equipment',
-      'Electrical Components & Equipment',
-      'Transportation and Transportation Infrastructure'
+      'Multi and Water Utilities'
     ]
   };
 
@@ -332,20 +354,6 @@ $: if ($selectedCompany && industries.length > 0) {
 
   $: chartHeight = expanded ? 500 : 320;
 
-  // Add helper to get explanation text
-  function getComparisonExplanation(industryName: string): string {
-    if (!industryName) return '';
-    
-    const explanations: Record<string, string> = {
-      'Textiles, Apparel & Luxury Goods': 'Showing comparison with consumer retail industries and manufacturing sectors due to shared supply chain and consumer market characteristics.',
-      'Software': 'Comparing with technology and digital services sectors due to shared technological infrastructure and market dynamics.',
-      'Banks': 'Showing financial services sector comparisons due to regulatory environment and market interdependencies.',
-      // Add more industry-specific explanations
-    };
-
-    return explanations[industryName] || 'Showing comparison with related industries based on business model and market sector.';
-  }
-
   // Modify your bar chart styles based on highlighted industry
   function getBarStyles(industryName: string) {
     const isHighlighted = industryName === highlightedIndustry;
@@ -452,21 +460,6 @@ $: if ($selectedCompany && industries.length > 0) {
         </div>
       {/each}
     </div>
-    <!-- Add explanation section here -->
-    {#if highlightedIndustry}
-      <div class="mb-4 bg-blue-50 p-3 rounded-lg">
-        <div class="flex items-start gap-2">
-          <div class="p-1 bg-blue-100 rounded-full">
-            <svg class="w-4 h-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div>
-            <p class="text-sm text-gray-600">{getComparisonExplanation(highlightedIndustry)}</p>
-          </div>
-        </div>
-      </div>
-    {/if}
   </div>
 
 
