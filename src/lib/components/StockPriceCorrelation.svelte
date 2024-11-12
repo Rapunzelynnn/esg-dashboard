@@ -382,40 +382,37 @@ function calculateQuartiles(data: ProcessedCompany[]) {
 
 // Add functions to calculate data insights
 function calculateDataInsights(data: ProcessedCompany[]) {
-  if (data.length === 0) return null;
+    if (data.length === 0) return null;
 
-  const esgScores = data.map(d => getSelectedEsgScore(d));
-  const priceChanges = data.map(d => d.priceChange);
+    const esgScores = data.map(d => getSelectedEsgScore(d));
+    const priceChanges = data.map(d => d.priceChange);
 
-  // Calculate ESG score clusters
-  const esgMin = Math.min(...esgScores);
-  const esgMax = Math.max(...esgScores);
-  const esgRange = `${Math.floor(esgMin)}-${Math.ceil(esgMax)}`;
+    const esgMin = Math.min(...esgScores);
+    const esgMax = Math.max(...esgScores);
+    const esgRange = `${Math.floor(esgMin)}-${Math.ceil(esgMax)}`;
 
-  // Calculate price change ranges
-  const priceMin = Math.min(...priceChanges);
-  const priceMax = Math.max(...priceChanges);
-  const priceRange = `${priceMin.toFixed(1)}% and ${priceMax.toFixed(1)}%`;
+    const priceMin = Math.min(...priceChanges);
+    const priceMax = Math.max(...priceChanges);
+    const priceRange = `${priceMin.toFixed(1)}% and ${priceMax.toFixed(1)}%`;
 
-  // Calculate performance tendency
-  const highEsgCompanies = data.filter(d => getSelectedEsgScore(d) > 60);
-  const highEsgAvgPerformance = highEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / highEsgCompanies.length;
-  const lowEsgCompanies = data.filter(d => getSelectedEsgScore(d) <= 60);
-  const lowEsgAvgPerformance = lowEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / lowEsgCompanies.length;
-  
-  const performanceTrend = highEsgAvgPerformance > lowEsgAvgPerformance ? 'positive' : 'negative';
+    const highEsgCompanies = data.filter(d => getSelectedEsgScore(d) > 60);
+    const highEsgAvgPerformance = highEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / highEsgCompanies.length;
+    const lowEsgCompanies = data.filter(d => getSelectedEsgScore(d) <= 60);
+    const lowEsgAvgPerformance = lowEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / lowEsgCompanies.length;
+    
+    const performanceTrend = highEsgAvgPerformance > lowEsgAvgPerformance ? 'positive' : 'negative';
 
-  // Calculate variability
-  const correlation = Math.abs(calculateCorrelation(esgScores, priceChanges));
-  const predictiveStrength = correlation > 0.5 ? 'strong' : correlation > 0.3 ? 'moderate' : 'weak';
+    const correlation = Math.abs(calculateCorrelation(esgScores, priceChanges));
+    const predictiveStrength = correlation > 0.5 ? 'strong' : correlation > 0.3 ? 'moderate' : 'weak';
 
-  return {
-    esgRange,
-    priceRange,
-    performanceTrend,
-    predictiveStrength
-  };
+    return {
+        esgRange,
+        priceRange,
+        performanceTrend,
+        predictiveStrength
+    };
 }
+
 
 // Add correlation calculation if not already present
 function calculateCorrelation(xs: number[], ys: number[]): number {
@@ -659,32 +656,35 @@ $: insights = calculateDataInsights(processedData);
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
       <!-- Analysis Summary -->
       {#if insights}
-        <div class="lg:col-span-3 bg-gray-50 p-4 rounded-lg">
-          <h3 class="text-xl font-semibold mb-4">Analysis Summary</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Left Column -->
-            <div class="space-y-4">
-              <div class="text-lg">
-                Most companies clustering between {insights.esgRange} ESG scores
+          <div class="lg:col-span-3 bg-gray-50 p-4 rounded-lg">
+              <h3 class="text-xl font-semibold mb-4">Analysis Summary</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Left Column -->
+                  <div class="space-y-4">
+                      <div class="text-lg">
+                          Most companies clustering between <strong>{insights.esgRange}</strong> ESG scores
+                      </div>
+                      <div class="text-lg">
+                          Price changes mostly falling between <strong>{insights.priceRange}</strong>
+                      </div>
+                  </div>
+                  <!-- Right Column -->
+                  <div class="space-y-4">
+                      <div class="text-lg">
+                          {#if insights.performanceTrend === 'positive'}
+                              A positive tendency for better price performance in companies with higher ESG scores
+                          {:else}
+                              <strong>No clear positive correlation</strong> between ESG scores and price performance
+                          {/if}
+                      </div>
+                      <div class="text-lg">
+                          High variability showing <strong>{insights.predictiveStrength} predictive power</strong> of ESG scores for stock performance
+                      </div>
+                  </div>
               </div>
-              <div class="text-lg">
-                Price changes mostly falling between {insights.priceRange}
-              </div>
-            </div>
-            <!-- Right Column -->
-            <div class="space-y-4">
-              <div class="text-lg">
-                {insights.performanceTrend === 'positive'
-                  ? 'A positive tendency for better price performance in companies with higher ESG scores'
-                  : 'No clear positive correlation between ESG scores and price performance'}
-              </div>
-              <div class="text-lg">
-                High variability showing {insights.predictiveStrength} predictive power of ESG scores for stock performance
-              </div>
-            </div>
           </div>
-        </div>
       {/if}
+
 
 
       <!-- Statistics -->
