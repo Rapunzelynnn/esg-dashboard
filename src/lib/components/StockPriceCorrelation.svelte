@@ -440,9 +440,6 @@ $: insights = calculateDataInsights(processedData);
   <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
     <div class="space-y-2">
       <h2 class="text-xl font-semibold">ESG Score vs Stock Price Performance</h2>
-      <p class="text-sm text-gray-600">
-        Correlation between {selectedMetric} ESG score and stock price change
-      </p>
     </div>
     
     <div class="flex flex-col sm:flex-row gap-2">

@@ -364,22 +364,9 @@ onMount(() => {
   <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
     <div class="space-y-2">
       <h2 class="text-xl font-semibold">ESG Score Components Analysis</h2>
-      <p class="text-sm text-gray-600">
-        {selectedMetric === 'absolute' ? 
-          'Environmental vs Social scores, bubble size represents Governance score' :
-          'Scores compared to industry averages'}
-      </p>
     </div>
     
-    <div class="flex flex-col sm:flex-row gap-2">
-      <select
-        bind:value={selectedMetric}
-        class="px-3 py-1 border rounded-lg bg-white"
-      >
-        <option value="absolute">Absolute Scores</option>
-        <option value="relative">Relative to Industry</option>
-      </select>
-      
+    <div class="flex flex-col sm:flex-row gap-2">      
       <input
         type="text"
         bind:value={searchTerm}
@@ -558,12 +545,6 @@ onMount(() => {
                     <div>Environmental: <span class="font-semibold">{envScore.toFixed(1)}</span></div>
                     <div>Social: <span class="font-semibold">{socScore.toFixed(1)}</span></div>
                     <div>Governance: <span class="font-semibold">{govScore.toFixed(1)}</span></div>
-                    {#if selectedMetric === 'relative'}
-                      <div>Industry Average ESG: <span class="font-semibold">
-                        {(industryAverages[company.industryName].envSum / 
-                          industryAverages[company.industryName].count).toFixed(1)}
-                      </span></div>
-                    {/if}
                     <div class="text-sm text-gray-500 mt-2">
                       Beta: {company.beta.toFixed(2)}
                     </div>

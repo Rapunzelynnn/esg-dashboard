@@ -383,32 +383,34 @@ function handleDropdownClick(event: MouseEvent) {
 
 <div class="w-full space-y-4">
   <!-- Header and Controls -->
-  <div class="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 items-start">
-    <h2 class="text-xl font-semibold">ESG Score vs Market Cap</h2>
-    
-    <!-- View Mode Toggle -->
-    <div class="flex space-x-2">
-      <button
-        class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'absolute' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
-        on:click={() => viewMode = 'absolute'}
-      >
-        Absolute Scores
-      </button>
-      <button
-        class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'relative' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
-        on:click={() => viewMode = 'relative'}
-      >
-        Industry-Relative
-      </button>
+  <div class="flex flex-row justify-between items-center">
+    <div class="flex items-center gap-4">
+      <h2 class="text-xl font-semibold">ESG Score vs Market Cap</h2>
+      
+      <!-- View Mode Toggle -->
+      <div class="flex space-x-2">
+        <button
+          class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'absolute' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
+          on:click={() => viewMode = 'absolute'}
+        >
+          Absolute Scores
+        </button>
+        <button
+          class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'relative' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
+          on:click={() => viewMode = 'relative'}
+        >
+          Industry-Relative
+        </button>
+      </div>
     </div>
     
     <!-- Search -->
-    <div class="flex-1 w-full sm:w-auto">
+    <div class="w-[200px]">
       <input
         type="text"
         bind:value={searchTerm}
         placeholder="Search company name, symbol, or industry..."
-        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 py-1 border rounded-lg focus:ring-2 focus:ring-blue-500"
       />
     </div>
   </div>
@@ -679,31 +681,28 @@ function handleDropdownClick(event: MouseEvent) {
 
   <!-- Statistics Panel -->
   {#if filteredData.length > 0}
-    <div class="bg-gray-50 p-4 rounded-lg">
-      <h3 class="font-semibold mb-2">Quick Stats</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-        <div class="text-sm text-gray-600">Average ESG Score</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div class="bg-gray-50 p-3 rounded-lg">
+        <div class="text-gray-600">Average ESG Score</div>
         <div class="font-semibold">
           {(filteredData.reduce((sum, co) => sum + co.esgScores.total, 0) / 
             filteredData.length).toFixed(1)}
         </div>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg">
+        <div class="text-gray-600">Companies Shown</div>
+        <div class="font-semibold">{filteredData.length}</div>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg">
+        <div class="text-gray-600">Outliers</div>
+        <div class="font-semibold">
+          {filteredData.filter(co => co.isOutlier).length}
         </div>
-        <div>
-          <div class="text-sm text-gray-600">Companies Shown</div>
-          <div class="font-semibold">{filteredData.length}</div>
-        </div>
-        <div>
-          <div class="text-sm text-gray-600">Outliers</div>
-          <div class="font-semibold">
-            {filteredData.filter(co => co.isOutlier).length}
-          </div>
-        </div>
-        <div>
-          <div class="text-sm text-gray-600">Industry Coverage</div>
-          <div class="font-semibold">
-            {selectedIndustries.size || industries.length} / {industries.length}
-          </div>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg">
+        <div class="text-gray-600">Industry Coverage</div>
+        <div class="font-semibold">
+          {selectedIndustries.size || industries.length} / {industries.length}
         </div>
       </div>
     </div>
