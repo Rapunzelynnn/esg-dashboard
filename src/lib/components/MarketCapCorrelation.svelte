@@ -439,87 +439,86 @@ function handleDropdownClick(event: MouseEvent) {
   </div>
 
   <!-- Industry Filters -->
-<!-- Industry Filters -->
-<div class="flex flex-col space-y-2">
-  <!-- Control buttons and dropdown -->
-  <div class="flex flex-wrap gap-2 items-center">
-    <button 
-      class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-      on:click={selectAll}
-    >
-      Select All
-    </button>
-    <button 
-      class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-      on:click={clearAll}
-    >
-      Clear All
-    </button>
-    
-    <!-- Add the dropdown here -->
-    <div class="relative">
-      <button
-        class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
-        on:click|stopPropagation={handleDropdownClick}
+  <div class="flex flex-col space-y-2">
+    <!-- Control buttons and dropdown -->
+    <div class="flex flex-wrap gap-2 items-center">
+      <button 
+        class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
+        on:click={selectAll}
       >
-        <span>More Industries</span>
-        <span class="text-xs">▼</span>
+        Select All
       </button>
-
-      {#if showDropdown}
-        <div 
-          class="absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
-          on:click|stopPropagation={() => {}}
+      <button 
+        class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
+        on:click={clearAll}
+      >
+        Clear All
+      </button>
+      
+      <!-- Add the dropdown here -->
+      <div class="relative">
+        <button
+          class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
+          on:click|stopPropagation={handleDropdownClick}
         >
-          <div class="p-4 space-y-4">
-            <!-- Search input -->
-            <input
-              type="text"
-              bind:value={searchTerm}
-              placeholder="Search industries..."
-              class="w-full px-3 py-2 border rounded-lg text-sm"
-            />
+          <span>More Industries</span>
+          <span class="text-xs">▼</span>
+        </button>
 
-            <!-- Group industries by category -->
-            {#each categoryOrder as category}
-              {@const categoryIndustries = industries.filter(i => 
-                Object.entries(industryCategories).find(([cat, _]) => 
-                  cat === category
-                )?.[1].industries.some(ci => ci.name === i)
-              )}
-              
-              {#if categoryIndustries.length > 0}
-                <div class="space-y-2">
-                  <div class="text-sm font-semibold text-gray-500">{category}</div>
-                  <div class="space-y-1 pl-2">
-                    {#each categoryIndustries as industry}
-                      {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
-                        <button
-                          class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                          on:click={() => toggleIndustry(industry)}
-                        >
-                          <div class="flex items-center flex-1">
-                            <div
-                              class="w-2 h-2 rounded-full mr-2"
-                              style="background-color: {colorScale.get(industry)}"
-                            ></div>
-                            <span>{industry}</span>
-                          </div>
-                          {#if selectedIndustries.has(industry)}
-                            <span class="text-blue-500">✓</span>
-                          {/if}
-                        </button>
-                      {/if}
-                    {/each}
+        {#if showDropdown}
+          <div 
+            class="absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
+            on:click|stopPropagation={() => {}}
+          >
+            <div class="p-4 space-y-4">
+              <!-- Search input -->
+              <input
+                type="text"
+                bind:value={searchTerm}
+                placeholder="Search industries..."
+                class="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+
+              <!-- Group industries by category -->
+              {#each categoryOrder as category}
+                {@const categoryIndustries = industries.filter(i => 
+                  Object.entries(industryCategories).find(([cat, _]) => 
+                    cat === category
+                  )?.[1].industries.some(ci => ci.name === i)
+                )}
+                
+                {#if categoryIndustries.length > 0}
+                  <div class="space-y-2">
+                    <div class="text-sm font-semibold text-gray-500">{category}</div>
+                    <div class="space-y-1 pl-2">
+                      {#each categoryIndustries as industry}
+                        {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
+                          <button
+                            class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                            on:click={() => toggleIndustry(industry)}
+                          >
+                            <div class="flex items-center flex-1">
+                              <div
+                                class="w-2 h-2 rounded-full mr-2"
+                                style="background-color: {colorScale.get(industry)}"
+                              ></div>
+                              <span>{industry}</span>
+                            </div>
+                            {#if selectedIndustries.has(industry)}
+                              <span class="text-blue-500">✓</span>
+                            {/if}
+                          </button>
+                        {/if}
+                      {/each}
+                    </div>
                   </div>
-                </div>
-              {/if}
-            {/each}
+                {/if}
+              {/each}
+            </div>
           </div>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
-  </div>
 
   <!-- Selected industries display -->
   <div class="flex flex-wrap gap-2">
@@ -620,64 +619,76 @@ function handleDropdownClick(event: MouseEvent) {
       </div>
 
       <!-- Data points -->
-      <div class="absolute left-16 right-8 top-8 bottom-8" role="group" aria-label="Company data points">
+      <div class="absolute left-16 right-8 top-8 bottom-8" role="group" aria-label="Company data points" style="z-index: 1;">
         {#each filteredData as company}
           {@const yValue = viewMode === 'absolute' ? company.esgScores.total : company.relativeESG}
-          <button
-            type="button"
-            class="absolute rounded-full transition-all duration-200
-              {hoveredPoint === company || selectedCompany === company 
-                ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
-              {company.isOutlier ? 'ring-2 ring-red-500' : ''}
-              {company.symbol === $globalSelectedCompany?.symbol ? 'ring-2 ring-blue-500' : ''}"
-            style="
-              left: {(company.marketCap / maxMarketCap) * 100}%;
-              bottom: {((yValue - minScore) / (maxScore - minScore)) * 100}%;
-              background-color: {colorScale.get(company.industryName)};
-              opacity: {$globalSelectedCompany && company.symbol !== $globalSelectedCompany.symbol ? '0.6' : '1'};
-              transform: translate(-50%, -50%) {company.symbol === $globalSelectedCompany?.symbol ? 'scale(1.2)' : 'scale(1)'};
-            "
-            on:mouseenter={() => hoveredPoint = company}
-            on:mouseleave={() => hoveredPoint = null}
-            on:click|stopPropagation={(e) => handlePointClick(company, e)}
-          >
+          <div class="absolute" style="
+            left: {(company.marketCap / maxMarketCap) * 100}%;
+            bottom: {((yValue - minScore) / (maxScore - minScore)) * 100}%;
+            transform: translate(-50%, -50%);
+            z-index: {hoveredPoint === company || selectedCompany === company ? 9999 : 1};
+          ">
+            <!-- Point button -->
+            <button
+              type="button"
+              class="point rounded-full transition-all duration-200
+                {hoveredPoint === company || selectedCompany === company 
+                  ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
+                {company.isOutlier ? 'ring-2 ring-red-500' : ''}
+                {company.symbol === $globalSelectedCompany?.symbol ? 'ring-2 selected-company' : ''}"
+              style="
+                background-color: {colorScale.get(company.industryName)};
+                transform: scale({company.symbol === $globalSelectedCompany?.symbol ? '1.5' : '1'});
+                opacity: {$globalSelectedCompany && company.symbol !== $globalSelectedCompany.symbol ? '0.6' : '1'};
+                --point-color: {colorScale.get(company.industryName)};
+                {company.symbol === $globalSelectedCompany?.symbol ? `box-shadow: 0 0 0 2px ${colorScale.get(company.industryName)}` : ''};
+              "
+              on:mouseenter={() => hoveredPoint = company}
+              on:mouseleave={() => hoveredPoint = null}
+              on:click|stopPropagation={(e) => handlePointClick(company, e)}
+            />
+
+            <!-- Tooltip -->
             {#if hoveredPoint === company || selectedCompany === company}
               <div
-                class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
-                  bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72
-                  text-left pointer-events-none"
+                class="company-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
+                  border border-gray-200 rounded-lg shadow-lg p-4 w-72
+                  text-left pointer-events-none bg-white"
+                style="z-index: 9999;"
                 transition:fade
                 role="tooltip"
                 aria-live="polite"
               >
-                <div class="font-bold">{company.fullName}</div>
-                <div class="text-sm text-gray-500">({company.symbol})</div>
-                <div class="text-sm text-gray-600">{company.industryName}</div>
-                <div class="mt-2 space-y-1">
-                  <div>ESG Score: <span class="font-semibold">
-                    {company.esgScores.total.toFixed(1)}
-                  </span></div>
-                  {#if viewMode === 'relative'}
-                    <div>Industry Z-Score: <span class="font-semibold">
-                      {(company.relativeESG || 0).toFixed(2)}σ
+                <div class="tooltip-content">
+                  <div class="font-bold">{company.fullName}</div>
+                  <div class="text-sm text-gray-500">({company.symbol})</div>
+                  <div class="text-sm text-gray-600">{company.industryName}</div>
+                  <div class="mt-2 space-y-1">
+                    <div>ESG Score: <span class="font-semibold">
+                      {company.esgScores.total.toFixed(1)}
                     </span></div>
-                    <div>Industry Average: <span class="font-semibold">
-                      {(company.industryAvg || 0).toFixed(1)}
+                    {#if viewMode === 'relative'}
+                      <div>Industry Z-Score: <span class="font-semibold">
+                        {(company.relativeESG || 0).toFixed(2)}σ
+                      </span></div>
+                      <div>Industry Average: <span class="font-semibold">
+                        {(company.industryAvg || 0).toFixed(1)}
+                      </span></div>
+                    {/if}
+                    <div>Market Cap: <span class="font-semibold">
+                      {formatMarketCap(company.marketCap)}
                     </span></div>
-                  {/if}
-                  <div>Market Cap: <span class="font-semibold">
-                    {formatMarketCap(company.marketCap)}
-                  </span></div>
-                  {#if company.isOutlier}
-                    <div class="text-red-500 text-sm mt-1">
-                      ⚠️ {company.relativeESG > 0 ? 'Significantly above' : 'Significantly below'} 
-                      industry average
-                    </div>
-                  {/if}
+                    {#if company.isOutlier}
+                      <div class="text-red-500 text-sm mt-1">
+                        ⚠️ {company.relativeESG > 0 ? 'Significantly above' : 'Significantly below'} 
+                        industry average
+                      </div>
+                    {/if}
+                  </div>
                 </div>
               </div>
             {/if}
-          </button>
+          </div>
         {/each}
       </div>
 
@@ -726,6 +737,7 @@ function handleDropdownClick(event: MouseEvent) {
 </div>
 
 <style>
+/* Previous styles */
 .transparent-button {
   background: transparent;
   border: none;
@@ -739,5 +751,68 @@ function handleDropdownClick(event: MouseEvent) {
 .transparent-button:focus-visible {
   outline: 2px solid #4F46E5;
   outline-offset: 2px;
+}
+
+/* Update pulse animation to use the point's color */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--point-rgb), 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--point-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--point-rgb), 0);
+  }
+}
+
+.selected-company {
+  animation: pulse 2s infinite;
+}
+
+/* Add helper function to convert hex to RGB */
+:global(.point.selected-company) {
+  animation: none;
+  position: relative;
+}
+
+:global(.point.selected-company::after) {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  animation: pulse-colored 2s infinite;
+  background-color: var(--point-color);
+  opacity: 0;
+}
+
+@keyframes pulse-colored {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Tooltip styles remain the same */
+:global(.company-tooltip) {
+  background-color: white !important;
+  isolation: isolate;
+}
+
+.chart-area {
+  position: relative;
+  isolation: isolate;
 }
 </style>

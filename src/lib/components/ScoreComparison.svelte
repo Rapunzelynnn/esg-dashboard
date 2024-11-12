@@ -353,17 +353,6 @@ $: visibleIndustries = $globalSelectedCompany
   ? [...relatedIndustries]
   : industries;
 
-// Update industry filter based on search
-$: filteredIndustries = visibleIndustries
-  .filter(industry => industry.toLowerCase().includes(searchTerm.toLowerCase()));
-
-
-// // Add click outside handler to close dropdown
-// function handleClickOutside(event: MouseEvent) {
-//   if (showDropdown) {
-//     showDropdown = false;
-//   }
-// }
 
 onMount(() => {
   const handleClickOutside = (event: MouseEvent) => {
@@ -380,6 +369,36 @@ onMount(() => {
     document.removeEventListener('click', handleClickOutside);
   };
 });
+
+// Add helper functions for coordinate calculations
+function getXPosition(score: number): string {
+  // Ensure the position stays within 0-100% of the available space
+  const position = Math.max(0, Math.min(100, score));
+  return `${position}%`;
+}
+
+function getYPosition(score: number): string {
+  // Ensure the position stays within 0-100% of the available space
+  const position = Math.max(0, Math.min(100, score));
+  return `${position}%`;
+}
+
+function getBubbleTransform(isSelected: boolean): string {
+  const baseTransform = 'translate(-50%, 50%)';
+  const scale = isSelected ? 'scale(1.5)' : 'scale(1)';
+  return `${baseTransform} ${scale}`;
+}
+
+function getDataPointPosition(xScore: number, yScore: number): { x: string; y: string } {
+  // Normalize the scores to fit within the grid (0-100%)
+  const x = Math.max(0, Math.min(100, xScore));
+  const y = Math.max(0, Math.min(100, yScore));
+  
+  return {
+    x: `${x}%`,
+    y: `${y}%`
+  };
+}
 </script>
 
 <div class="w-full space-y-4">
@@ -511,141 +530,141 @@ onMount(() => {
       {/each}
     </div>
   </div>
-    <div class="relative" style="height: {expanded ? 600 : 400}px;">
+  <div class="relative" style="height: {expanded ? 600 : 400}px;">
     <div class="absolute inset-0">
-      <!-- Axes and Grid -->
+      <!-- Main chart area with grid -->
       <div class="absolute inset-x-16 inset-y-8 border-l border-b border-gray-200">
-        <!-- Y-axis ticks and labels -->
-        {#each yAxisTicks as tick}
+        <!-- Grid lines -->
+        {#each [20, 40, 60, 80] as tick}
           <div
-            class="absolute left-0 w-full h-0 flex items-center"
-            style="bottom: {getTickPosition(tick)}"
-          >
-            <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
-              {getTickLabel(tick)}
-            </div>
-            <div class="w-full border-t border-gray-100" />
-          </div>
+            class="absolute w-full border-t border-gray-100"
+            style="bottom: {tick}%"
+          />
+          <div
+            class="absolute h-full border-l border-gray-100"
+            style="left: {tick}%"
+          />
         {/each}
 
-        <!-- X-axis ticks and labels -->
-        {#each xAxisTicks as tick}
-          <div
-            class="absolute bottom-0 h-full w-0 flex justify-center"
-            style="left: {getTickPosition(tick)}"
-          >
-            <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
-              {getTickLabel(tick)}
-            </div>
-            <div class="h-full border-l border-gray-100" />
-          </div>
-        {/each}
-        
         <!-- Data points -->
-        <div class="absolute left-16 right-8 top-8 bottom-8" role="group" aria-label="Company data points">
+        <div class="absolute inset-0">
           {#each processedData as company}
-            {@const industryAvg = industryAverages[company.industryName]}
-            {@const envScore = selectedMetric === 'absolute' 
-              ? company.esgScores.environmental.score 
-              : getRelativeScore(company.esgScores.environmental.score, industryAvg.envSum / industryAvg.count)}
-            {@const socScore = selectedMetric === 'absolute' 
-              ? company.esgScores.social.score 
-              : getRelativeScore(company.esgScores.social.score, industryAvg.socSum / industryAvg.count)}
-            {@const govScore = selectedMetric === 'absolute' 
-              ? company.esgScores.governance.score 
-              : getRelativeScore(company.esgScores.governance.score, industryAvg.govSum / industryAvg.count)}
-
-            <button
-              class="absolute rounded-full transition-all duration-200"
+            {@const envScore = company.esgScores.environmental.score}
+            {@const socScore = company.esgScores.social.score}
+            {@const govScore = company.esgScores.governance.score}
+            {@const isSelected = isSelectedCompany(company)}
+            
+            <div 
+              class="absolute" 
               style="
-                left: {selectedMetric === 'absolute' ? envScore : (envScore + 50)}%;
-                bottom: {selectedMetric === 'absolute' ? socScore : (socScore + 50)}%;
-                width: {getBubbleSize(company.esgScores.governance.score)}px;
-                height: {getBubbleSize(company.esgScores.governance.score)}px;
-                background-color: {colorScale.get(company.industryName)};
-                transform: translate(-50%, -50%) {isSelectedCompany(company) ? 'scale(1.1)' : 'scale(1)'};
-                opacity: {$globalSelectedCompany && !isSelectedCompany(company) ? 0.3 : 0.7};
-                box-shadow: {isSelectedCompany(company) ? '0 0 0 2px white, 0 0 0 4px #3B82F6' : 'none'};
+                left: {envScore}%;
+                bottom: {socScore}%;
+                transform: translate(-50%, 50%);
+                z-index: {hoveredCompany === company ? 9999 : 1};
               "
-              on:mouseenter={() => hoveredCompany = company}
-              on:mouseleave={() => hoveredCompany = null}
             >
+              <!-- Point button -->
+              <button
+                type="button"
+                class="point rounded-full transition-all duration-200
+                  {hoveredCompany === company ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
+                  {isSelected ? 'selected-company' : ''}"
+                style="
+                  background-color: {colorScale.get(company.industryName)};
+                  transform: scale({isSelected ? '1.5' : '1'});
+                  opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
+                  --point-color: {colorScale.get(company.industryName)};
+                  {isSelected ? `box-shadow: 0 0 0 2px ${colorScale.get(company.industryName)}` : ''};
+                "
+                on:mouseenter={() => hoveredCompany = company}
+                on:mouseleave={() => hoveredCompany = null}
+              />
+
+              <!-- Tooltip (hover only) -->
               {#if hoveredCompany === company}
                 <div
-                  class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
-                    bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72
-                    text-left pointer-events-none z-10"
+                  class="company-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
+                    border border-gray-200 rounded-lg shadow-lg p-4 w-72
+                    text-left pointer-events-none bg-white"
+                  style="z-index: 9999;"
                   transition:fade
+                  role="tooltip"
+                  aria-live="polite"
                 >
                   <div class="font-bold">{company.fullName}</div>
                   <div class="text-sm text-gray-500">({company.symbol})</div>
                   <div class="text-sm text-gray-600">{company.industryName}</div>
                   <div class="mt-2 space-y-1">
-                    <div>
-                      Environmental: 
-                      <span class="font-semibold">
-                        {formatScore(company.esgScores.environmental.score)}
-                      </span>
-                      {#if selectedMetric === 'relative'}
-                        <span class="text-sm text-gray-500">
-                          ({formatScore(envScore, true)} vs industry)
-                        </span>
-                      {/if}
-                    </div>
-                    <div>
-                      Social: 
-                      <span class="font-semibold">
-                        {formatScore(company.esgScores.social.score)}
-                      </span>
-                      {#if selectedMetric === 'relative'}
-                        <span class="text-sm text-gray-500">
-                          ({formatScore(socScore, true)} vs industry)
-                        </span>
-                      {/if}
-                    </div>
-                    <div>
-                      Governance: 
-                      <span class="font-semibold">
-                        {formatScore(company.esgScores.governance.score)}
-                      </span>
-                      {#if selectedMetric === 'relative'}
-                        <span class="text-sm text-gray-500">
-                          ({formatScore(govScore, true)} vs industry)
-                        </span>
-                      {/if}
-                    </div>
+                    <div>Environmental: <span class="font-semibold">{envScore.toFixed(1)}</span></div>
+                    <div>Social: <span class="font-semibold">{socScore.toFixed(1)}</span></div>
+                    <div>Governance: <span class="font-semibold">{govScore.toFixed(1)}</span></div>
+                    {#if selectedMetric === 'relative'}
+                      <div>Industry Average ESG: <span class="font-semibold">
+                        {(industryAverages[company.industryName].envSum / 
+                          industryAverages[company.industryName].count).toFixed(1)}
+                      </span></div>
+                    {/if}
                     <div class="text-sm text-gray-500 mt-2">
                       Beta: {company.beta.toFixed(2)}
                     </div>
                   </div>
                 </div>
               {/if}
-            </button>
+            </div>
           {/each}
         </div>
-      </div>
 
-      <!-- Axis Labels -->
-      <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center">
-        <div class="h-16"></div>
-        <div class="text-sm text-gray-600 font-medium">
-          {#if selectedMetric === 'absolute'}
-            Environmental Score
-          {:else}
-            Environmental Score (% vs Industry Average)
-          {/if}
+        <!-- Axis ticks and labels -->
+        <div class="absolute inset-0">
+          <!-- Y-axis ticks -->
+          {#each yAxisTicks as tick}
+            <div
+              class="absolute left-0 w-full h-0 flex items-center"
+              style="bottom: {getTickPosition(tick)}"
+            >
+              <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
+                {getTickLabel(tick)}
+              </div>
+              <div class="w-full border-t border-gray-100" />
+            </div>
+          {/each}
+
+          <!-- X-axis ticks -->
+          {#each xAxisTicks as tick}
+            <div
+              class="absolute bottom-0 h-full w-0 flex justify-center"
+              style="left: {getTickPosition(tick)}"
+            >
+              <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
+                {getTickLabel(tick)}
+              </div>
+              <div class="h-full border-l border-gray-100" />
+            </div>
+          {/each}
+          <!-- Y-axis ticks and labels -->
+          <div class="absolute -left-16 inset-y-0 flex items-center">
+            <div class="transform -rotate-90 text-sm text-gray-600 whitespace-nowrap">
+              {#if selectedMetric === 'absolute'}
+                Social Score
+              {:else}
+                Social Score (% vs Industry Average)
+              {/if}
+            </div>
+          </div>
+          <!-- X-axis ticks and labels  -->
+          <div class="absolute -bottom-12 inset-x-0 text-center">
+            <div class="text-sm text-gray-600">
+              {#if selectedMetric === 'absolute'}
+                Environmental Score
+              {:else}
+                Environmental Score (% vs Industry Average)
+              {/if}
+            </div>
         </div>
       </div>
 
-      <div class="absolute left-2 top-1/2 -rotate-90 text-sm text-gray-600 font-medium whitespace-nowrap">
-        {#if selectedMetric === 'absolute'}
-          Social Score
-        {:else}
-          Social Score (% vs Industry Average)
-        {/if}
-      </div>
-
-      <!-- Legend -->
+    </div>
+     <!-- Legend -->
       <div class="absolute right-4 top-4 bg-white/80 p-2 rounded-lg shadow-sm">
         <div class="text-sm text-gray-600 font-medium">Bubble Size</div>
         <div class="text-xs text-gray-500">= Governance Score</div>
@@ -659,7 +678,7 @@ onMount(() => {
     </div>
   </div>
 
-  <!-- Statistics -->
+  <!-- Statistics Panel -->
   {#if processedData.length > 0}
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
       <div class="bg-gray-50 p-3 rounded-lg">
@@ -690,3 +709,59 @@ onMount(() => {
     </div>
   {/if}
 </div>
+
+<style>
+.data-point {
+  position: absolute;
+  transform-origin: center center;
+  transition: all 0.2s ease-in-out;
+}
+
+.point.selected-company::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: var(--point-color);
+  animation: pulse-colored 2s infinite;
+}
+
+@keyframes pulse-colored {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+:global(.company-tooltip) {
+  background-color: white !important;
+  isolation: isolate;
+}
+
+/* Add these styles to properly position the axis labels */
+.chart-area {
+  position: relative;
+  isolation: isolate;
+  margin: 1rem 0;
+}
+
+/* Ensure labels don't overlap with chart content */
+.axis-label {
+  position: absolute;
+  font-size: 0.875rem;
+  color: #4B5563;
+  white-space: nowrap;
+}
+</style>
