@@ -3,7 +3,6 @@
 import { fade } from 'svelte/transition';
 import type { 
   Company, 
-  IndustryStats, 
   IndustryAccumulator,
   ProcessedCompanyData 
 } from '$lib/types';
@@ -368,33 +367,9 @@ function initializeSelectedIndustries(company: Company | null) {
   selectedIndustries = new Set(categoryIndustries);
 }
 
-// Add new helper function for industry filter buttons
-function getIndustryButtonStyle(industry: string) {
-  const isSelected = selectedIndustries.has(industry);
-  const isRelatedIndustry = $globalSelectedCompany && relevantIndustries.has(industry);
-  const color = getIndustryColor(industry);
-  
-  return {
-    backgroundColor: isSelected ? color : 'transparent',
-    color: isSelected ? 'white' : color,
-    border: `1px solid ${color}`,
-    opacity: $globalSelectedCompany && !isRelatedIndustry ? '0.5' : '1',
-    boxShadow: industry === $globalSelectedCompany?.industryName ? '0 0 0 2px rgb(59 130 246)' : 'none'
-  };
-}
-
 // Update the reactive statement for selected company changes
 $: if ($globalSelectedCompany) {
   initializeSelectedIndustries($globalSelectedCompany);
-}
-
-// Function to determine if an industry should be shown in the main view
-function shouldShowIndustry(industry: string): boolean {
-  if (showAllIndustries) return true;
-  if (selectedIndustries.has(industry)) return true;
-  // Add null check for globalSelectedCompany
-  if (!$globalSelectedCompany) return false;
-  return relevantIndustries.has(industry);
 }
 
 function handleDropdownClick(event: MouseEvent) {

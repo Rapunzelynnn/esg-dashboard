@@ -69,11 +69,6 @@ interface IndustryInfo {
   shade: string;
 }
 
-interface CategoryInfo {
-  base: string;
-  industries: IndustryInfo[];
-}
-
 const categoryOrder = [
   'Information Technology',
   'Communication Services',
@@ -247,7 +242,7 @@ $: relevantIndustries = new Set<string>((() => {
     .filter(name => industries.includes(name));
 })());
 
-// Helper Function
+
 // Fix industry selection functions
 function toggleIndustry(industry: string) {
   selectedIndustries = new Set(selectedIndustries);
@@ -347,12 +342,6 @@ $: if ($globalSelectedCompany) {
   }
 }
 
-// Get visible industries for the dropdown
-$: visibleIndustries = $globalSelectedCompany 
-  ? [...relatedIndustries]
-  : industries;
-
-
 onMount(() => {
   const handleClickOutside = (event: MouseEvent) => {
     if (showDropdown) {
@@ -368,36 +357,6 @@ onMount(() => {
     document.removeEventListener('click', handleClickOutside);
   };
 });
-
-// Add helper functions for coordinate calculations
-function getXPosition(score: number): string {
-  // Ensure the position stays within 0-100% of the available space
-  const position = Math.max(0, Math.min(100, score));
-  return `${position}%`;
-}
-
-function getYPosition(score: number): string {
-  // Ensure the position stays within 0-100% of the available space
-  const position = Math.max(0, Math.min(100, score));
-  return `${position}%`;
-}
-
-function getBubbleTransform(isSelected: boolean): string {
-  const baseTransform = 'translate(-50%, 50%)';
-  const scale = isSelected ? 'scale(1.5)' : 'scale(1)';
-  return `${baseTransform} ${scale}`;
-}
-
-function getDataPointPosition(xScore: number, yScore: number): { x: string; y: string } {
-  // Normalize the scores to fit within the grid (0-100%)
-  const x = Math.max(0, Math.min(100, xScore));
-  const y = Math.max(0, Math.min(100, yScore));
-  
-  return {
-    x: `${x}%`,
-    y: `${y}%`
-  };
-}
 </script>
 
 <div class="w-full space-y-4">

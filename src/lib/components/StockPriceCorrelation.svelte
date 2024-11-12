@@ -320,9 +320,6 @@ $: visibleIndustries = $globalSelectedCompany
   ? [...relevantIndustries]
   : industries;
 
-$: filteredIndustries = visibleIndustries
-  .filter(industry => industry.toLowerCase().includes(searchTerm.toLowerCase()));
-
 // Lifecycle
 onMount(() => {
   const handleClickOutside = (event: MouseEvent) => {
@@ -366,24 +363,6 @@ onMount(() => {
 function getPointColor(priceChange: number, industry: string): string {
   return colorScale.get(industry) || '#808080';
 }
-
-
-function calculateR2(data: ProcessedCompany[], polynomial: any): number {
-  const xs = data.map(d => getSelectedEsgScore(d));
-  const ys = data.map(d => d.priceChange);
-  
-  const yMean = ys.reduce((sum, y) => sum + y, 0) / ys.length;
-  const predicted = xs.map(x => 
-    polynomial.coeffs.reduce((sum: number, coeff: number, power: number) => 
-      sum + coeff * Math.pow(x, power), 0)
-  );
-  
-  const ssRes = ys.reduce((sum, y, i) => sum + Math.pow(y - predicted[i], 2), 0);
-  const ssTot = ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
-  
-  return 1 - (ssRes / ssTot);
-}
-
 
 function calculateQuartiles(data: ProcessedCompany[]) {
   const sortedEsg = [...data].sort((a, b) => getSelectedEsgScore(a) - getSelectedEsgScore(b));
@@ -467,16 +446,6 @@ $: insights = calculateDataInsights(processedData);
     </div>
     
     <div class="flex flex-col sm:flex-row gap-2">
-      <!-- <select
-        bind:value={selectedMetric}
-        class="px-3 py-1 border rounded-lg bg-white"
-      >
-        <option value="total">Total ESG Score</option>
-        <option value="environmental">Environmental Score</option>
-        <option value="social">Social Score</option>
-        <option value="governance">Governance Score</option>
-      </select> -->
-      
       <input
         type="text"
         bind:value={searchTerm}
