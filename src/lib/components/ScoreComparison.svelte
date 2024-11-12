@@ -298,17 +298,16 @@ $: colorScale = new Map(industries.map(industry => [
 
 
 function getBubbleSize(score: number): number {
-  const minSize = 4;
-  const maxSize = expanded ? 24 : 16;
-  return minSize + (score / 100) * (maxSize - minSize);
-}
-
-function getRelativeScore(score: number, mean: number): number {
-  return ((score - mean) / mean) * 100; // Percentage difference from mean
-}
-
-function formatScore(value: number, isRelative = false): string {
-  return isRelative ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%` : value.toFixed(1);
+  // Define larger base sizes with more dramatic differences
+  const minSize = 6;    // Smallest size
+  const maxSize = expanded ? 32 : 24;  // Increased maximum for better contrast
+  
+  // Calculate size range with more dramatic steps
+  if (score < 20) return minSize;                   // 6px
+  if (score < 40) return minSize + 6;              // 12px
+  if (score < 60) return minSize + 12;             // 18px
+  if (score < 80) return minSize + 18;             // 24px
+  return maxSize;                                  // 32px/24px
 }
 
 
@@ -571,14 +570,16 @@ function getDataPointPosition(xScore: number, yScore: number): { x: string; y: s
                   {isSelected ? 'selected-company' : ''}"
                 style="
                   background-color: {colorScale.get(company.industryName)};
-                  transform: scale({isSelected ? '1.5' : '1'});
+                  width: {getBubbleSize(govScore)}px;
+                  height: {getBubbleSize(govScore)}px;
                   opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
                   --point-color: {colorScale.get(company.industryName)};
-                  {isSelected ? `box-shadow: 0 0 0 2px ${colorScale.get(company.industryName)}` : ''};
+                  {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${colorScale.get(company.industryName)}` : ''};
                 "
                 on:mouseenter={() => hoveredCompany = company}
                 on:mouseleave={() => hoveredCompany = null}
               />
+
 
               <!-- Tooltip (hover only) -->
               {#if hoveredCompany === company}
@@ -641,6 +642,7 @@ function getDataPointPosition(xScore: number, yScore: number): { x: string; y: s
               <div class="h-full border-l border-gray-100" />
             </div>
           {/each}
+
           <!-- Y-axis ticks and labels -->
           <div class="absolute -left-16 inset-y-0 flex items-center">
             <div class="transform -rotate-90 text-sm text-gray-600 whitespace-nowrap">
@@ -665,14 +667,30 @@ function getDataPointPosition(xScore: number, yScore: number): { x: string; y: s
 
     </div>
      <!-- Legend -->
-      <div class="absolute right-4 top-4 bg-white/80 p-2 rounded-lg shadow-sm">
+      <div class="absolute right-4 top-4 bg-white/80 p-2 rounded-lg shadow-lg">
         <div class="text-sm text-gray-600 font-medium">Bubble Size</div>
         <div class="text-xs text-gray-500">= Governance Score</div>
-        <div class="flex items-center mt-1 space-x-2">
-          <div class="w-2 h-2 rounded-full bg-gray-400"></div>
-          <span class="text-xs">Low</span>
-          <div class="w-4 h-4 rounded-full bg-gray-400"></div>
-          <span class="text-xs">High</span>
+        <div class="flex items-center mt-2 gap-3">
+          <div class="flex flex-col items-center">
+            <div class="w-[6px] h-[6px] rounded-full bg-gray-400"></div>
+            <span class="text-xs mt-1">0-20</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-[12px] h-[12px] rounded-full bg-gray-400"></div>
+            <span class="text-xs mt-1">20-40</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-[18px] h-[18px] rounded-full bg-gray-400"></div>
+            <span class="text-xs mt-1">40-60</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-[24px] h-[24px] rounded-full bg-gray-400"></div>
+            <span class="text-xs mt-1">60-80</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-[32px] h-[32px] rounded-full bg-gray-400"></div>
+            <span class="text-xs mt-1">80-100</span>
+          </div>
         </div>
       </div>
     </div>
@@ -711,10 +729,13 @@ function getDataPointPosition(xScore: number, yScore: number): { x: string; y: s
 </div>
 
 <style>
-.data-point {
-  position: absolute;
-  transform-origin: center center;
+.point {
+  position: relative;
   transition: all 0.2s ease-in-out;
+}
+
+.point.selected-company {
+  z-index: 30; /* Ensure the selected point stays above others */
 }
 
 .point.selected-company::before {
@@ -727,20 +748,33 @@ function getDataPointPosition(xScore: number, yScore: number): { x: string; y: s
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background-color: var(--point-color);
-  animation: pulse-colored 2s infinite;
+  animation: pulse-colored 1.5s infinite; /* Faster animation */
+}
+
+.point.selected-company::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: var(--point-color);
+  animation: pulse-colored 1.5s infinite 0.75s; /* Second pulse with delay */
 }
 
 @keyframes pulse-colored {
   0% {
     transform: translate(-50%, -50%) scale(1);
-    opacity: 0.7;
+    opacity: 0.8;  /* Start more visible */
   }
-  70% {
-    transform: translate(-50%, -50%) scale(2);
-    opacity: 0;
+  50% {
+    transform: translate(-50%, -50%) scale(3);  /* Larger scale */
+    opacity: 0.4;  /* Stay visible longer */
   }
   100% {
-    transform: translate(-50%, -50%) scale(2);
+    transform: translate(-50%, -50%) scale(4);  /* Even larger final scale */
     opacity: 0;
   }
 }

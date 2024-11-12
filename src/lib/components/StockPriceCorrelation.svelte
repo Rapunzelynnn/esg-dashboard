@@ -620,27 +620,38 @@ $: insights = calculateDataInsights(processedData);
         <!-- Data points -->
         {#each processedData as company}
           {@const esgScore = getSelectedEsgScore(company)}
-          <button
-            class="absolute rounded-full transition-all duration-200"
+          {@const isSelected = company.symbol === $globalSelectedCompany?.symbol}
+          
+          <div 
+            class="absolute" 
             style="
               left: {(esgScore / xMax) * 100}%;
               bottom: {getYPosition(company.priceChange)};
-              width: {company.symbol === $globalSelectedCompany?.symbol ? '12px' : expanded ? '8px' : '6px'};
-              height: {company.symbol === $globalSelectedCompany?.symbol ? '12px' : expanded ? '8px' : '6px'};
-              background-color: {getPointColor(company.priceChange, company.industryName)};
               transform: translate(-50%, -50%);
-              opacity: {company.symbol === $globalSelectedCompany?.symbol ? '1' : '0.7'};
-              z-index: {company.symbol === $globalSelectedCompany?.symbol ? '10' : '0'};
-              border: {company.symbol === $globalSelectedCompany?.symbol ? '2px solid #3B82F6' : 'none'};
+              z-index: {hoveredCompany === company || isSelected ? 9999 : 1};
             "
-            on:mouseenter={() => hoveredCompany = company}
-            on:mouseleave={() => hoveredCompany = null}
           >
+            <button
+              type="button"
+              class="point rounded-full transition-all duration-200
+                {isSelected ? 'selected-company' : ''}"
+              style="
+                width: {isSelected ? '16px' : expanded ? '12px' : '10px'};  /* Increased from 12/8/6 to 16/12/10 */
+                height: {isSelected ? '16px' : expanded ? '12px' : '10px'}; /* Increased from 12/8/6 to 16/12/10 */
+                background-color: {getPointColor(company.priceChange, company.industryName)};
+                opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
+                --point-color: {getPointColor(company.priceChange, company.industryName)};
+                {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${getPointColor(company.priceChange, company.industryName)}` : ''};
+              "
+              on:mouseenter={() => hoveredCompany = company}
+              on:mouseleave={() => hoveredCompany = null}
+            />
+
             {#if hoveredCompany === company}
               <div
-                class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
+                class="company-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
                   bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72
-                  text-left pointer-events-none z-20"
+                  text-left pointer-events-none z-50"
                 transition:fade
               >
                 <div class="font-bold">{company.fullName}</div>
@@ -662,7 +673,7 @@ $: insights = calculateDataInsights(processedData);
                 </div>
               </div>
             {/if}
-          </button>
+          </div>
         {/each}
       </div>
 
@@ -728,3 +739,44 @@ $: insights = calculateDataInsights(processedData);
     </div>
   {/if}
 </div>
+
+<style>
+.point {
+  position: relative;
+  transform-origin: center center;
+  transition: all 0.2s ease-in-out;
+}
+
+.point.selected-company::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: var(--point-color);
+  animation: pulse-colored 2s infinite;
+}
+
+@keyframes pulse-colored {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+:global(.company-tooltip) {
+  background-color: white !important;
+  isolation: isolate;
+}
+</style>

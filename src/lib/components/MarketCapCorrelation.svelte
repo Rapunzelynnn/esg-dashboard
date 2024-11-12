@@ -622,6 +622,8 @@ function handleDropdownClick(event: MouseEvent) {
       <div class="absolute left-16 right-8 top-8 bottom-8" role="group" aria-label="Company data points" style="z-index: 1;">
         {#each filteredData as company}
           {@const yValue = viewMode === 'absolute' ? company.esgScores.total : company.relativeESG}
+          {@const isSelected = company.symbol === $globalSelectedCompany?.symbol}
+          
           <div class="absolute" style="
             left: {(company.marketCap / maxMarketCap) * 100}%;
             bottom: {((yValue - minScore) / (maxScore - minScore)) * 100}%;
@@ -632,22 +634,19 @@ function handleDropdownClick(event: MouseEvent) {
             <button
               type="button"
               class="point rounded-full transition-all duration-200
-                {hoveredPoint === company || selectedCompany === company 
-                  ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
+                {hoveredPoint === company || selectedCompany === company ? 'w-5 h-5 z-20' : 'w-2.5 h-2.5 z-10'}
                 {company.isOutlier ? 'ring-2 ring-red-500' : ''}
-                {company.symbol === $globalSelectedCompany?.symbol ? 'ring-2 selected-company' : ''}"
+                {isSelected ? 'selected-company' : ''}"
               style="
                 background-color: {colorScale.get(company.industryName)};
-                transform: scale({company.symbol === $globalSelectedCompany?.symbol ? '1.5' : '1'});
-                opacity: {$globalSelectedCompany && company.symbol !== $globalSelectedCompany.symbol ? '0.6' : '1'};
+                opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
                 --point-color: {colorScale.get(company.industryName)};
-                {company.symbol === $globalSelectedCompany?.symbol ? `box-shadow: 0 0 0 2px ${colorScale.get(company.industryName)}` : ''};
+                {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${colorScale.get(company.industryName)}` : ''};
               "
               on:mouseenter={() => hoveredPoint = company}
               on:mouseleave={() => hoveredPoint = null}
               on:click|stopPropagation={(e) => handlePointClick(company, e)}
             />
-
             <!-- Tooltip -->
             {#if hoveredPoint === company || selectedCompany === company}
               <div
@@ -737,46 +736,13 @@ function handleDropdownClick(event: MouseEvent) {
 </div>
 
 <style>
-/* Previous styles */
-.transparent-button {
-  background: transparent;
-  border: none;
-  cursor: default;
-}
-
-.transparent-button:focus {
-  outline: none;
-}
-
-.transparent-button:focus-visible {
-  outline: 2px solid #4F46E5;
-  outline-offset: 2px;
-}
-
-/* Update pulse animation to use the point's color */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(var(--point-rgb), 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(var(--point-rgb), 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(var(--point-rgb), 0);
-  }
-}
-
-.selected-company {
-  animation: pulse 2s infinite;
-}
-
-/* Add helper function to convert hex to RGB */
-:global(.point.selected-company) {
-  animation: none;
+.point {
   position: relative;
+  transform-origin: center center;
+  transition: all 0.2s ease-in-out;
 }
 
-:global(.point.selected-company::after) {
+.point.selected-company::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -785,9 +751,8 @@ function handleDropdownClick(event: MouseEvent) {
   height: 100%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  animation: pulse-colored 2s infinite;
   background-color: var(--point-color);
-  opacity: 0;
+  animation: pulse-colored 2s infinite;
 }
 
 @keyframes pulse-colored {
@@ -796,16 +761,15 @@ function handleDropdownClick(event: MouseEvent) {
     opacity: 0.7;
   }
   70% {
-    transform: translate(-50%, -50%) scale(2.5);
+    transform: translate(-50%, -50%) scale(3);
     opacity: 0;
   }
   100% {
-    transform: translate(-50%, -50%) scale(2.5);
+    transform: translate(-50%, -50%) scale(3);
     opacity: 0;
   }
 }
 
-/* Tooltip styles remain the same */
 :global(.company-tooltip) {
   background-color: white !important;
   isolation: isolate;
