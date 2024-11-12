@@ -376,6 +376,40 @@ function handleDropdownClick(event: MouseEvent) {
   event.stopPropagation();
   showDropdown = !showDropdown;
 }
+
+// Add new function to format x-axis labels
+function formatXAxisLabel(value: number): string {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(0)}T`;
+  } else {
+    return `${value}B`;
+  }
+}
+
+// Add x-axis tick values calculation
+$: xAxisTicks = (() => {
+  const maxValue = maxMarketCap / 1_000_000_000; // Convert to billions
+  if (maxValue <= 0) return [];
+  
+  // Calculate appropriate tick intervals based on max value
+  let interval: number;
+  if (maxValue > 1000) {
+    interval = 200; // For trillion+ companies
+  } else if (maxValue > 500) {
+    interval = 100;
+  } else if (maxValue > 200) {
+    interval = 50;
+  } else {
+    interval = 20;
+  }
+  
+  const ticks = [];
+  for (let i = 0; i <= maxValue; i += interval) {
+    ticks.push(i);
+  }
+  return ticks;
+})();
+
 </script>
 
 <svelte:window on:click={() => showDropdown = false} />
@@ -576,6 +610,34 @@ function handleDropdownClick(event: MouseEvent) {
           {viewMode === 'absolute' ? 'ESG Score' : 'ESG Score (Standard Deviations from Industry Mean)'}
         </div>
 
+        <!-- Add X-axis ticks here, before the X-axis label -->
+        <div
+          class="absolute left-16 right-8 bottom-8"
+          role="group"
+          aria-label="X-axis ticks"
+        >
+          {#each xAxisTicks as tick}
+            <div
+              class="absolute h-8"
+              style="left: {(tick * 1_000_000_000 / maxMarketCap) * 100}%;"
+            >
+              <div class="h-2 w-px bg-gray-200"></div>
+              <div class="text-xs text-gray-600 mt-1 -translate-x-1/2">
+                {formatXAxisLabel(tick)}
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <!-- X-axis label with adjusted bottom position -->
+        <div
+          class="absolute bottom-[-24px] left-16 right-0 text-center text-sm text-gray-600"
+          role="text"
+        >
+          Market Cap (Billions USD)
+        </div>
+
+
       <!-- Grid lines -->
       <div class="absolute left-16 right-0 top-0 bottom-8" aria-hidden="true">
         {#if viewMode === 'absolute'}
@@ -667,14 +729,6 @@ function handleDropdownClick(event: MouseEvent) {
           </div>
         {/each}
       </div>
-
-      <!-- X-axis label -->
-      <span 
-        class="absolute bottom-0 left-16 right-0 text-center text-sm text-gray-600"
-        role="text"
-      >
-        Market Cap (Billions USD)
-      </span>
     </div>
   </button>
 </section>
