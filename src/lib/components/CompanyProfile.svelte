@@ -5,11 +5,11 @@
     import ESGScores from './ESGScores.svelte';
 
     const scoreRanges = [
-        { label: 'Poor', color: 'bg-red-400' },
-        { label: 'Fair', color: 'bg-yellow-400' },
-        { label: 'Good', color: 'bg-emerald-400' },
-        { label: 'Very Good', color: 'bg-sky-400' },
-        { label: 'Excellent', color: 'bg-blue-600' }
+        { label: 'Poor', color: 'bg-red-500' },
+        { label: 'Fair', color: 'bg-amber-500' },
+        { label: 'Good', color: 'bg-teal-500' },
+        { label: 'Very Good', color: 'bg-cyan-500' },
+        { label: 'Excellent', color: 'bg-blue-500' }
     ];
 
     function formatMarketCap(value: number): string {
