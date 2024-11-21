@@ -554,43 +554,18 @@ $: insights = calculateDataInsights(processedData);
     <div class="absolute inset-0">
       <!-- Axes and Grid -->
       <div class="absolute inset-x-16 inset-y-8 border-l border-b border-gray-200">
-        <!-- Y-axis ticks -->
-        {#each yTicks as tick}
-          <div
-            class="absolute left-0 w-full h-0 flex items-center"
-            style="bottom: {getYPosition(tick)}"
-          >
-            <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
-              {formatPriceChange(tick)}
-            </div>
-            <div class="w-full border-t border-gray-100" />
-          </div>
-        {/each}
-
-        <!-- X-axis ticks -->
-        {#each [0, 20, 40, 60, 80, 100] as tick}
-          <div
-            class="absolute bottom-0 h-full w-0 flex justify-center"
-            style="left: {tick}%"
-          >
-            <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
-              {tick}
-            </div>
-            <div class="h-full border-l border-gray-100" />
-          </div>
-        {/each}
-
         <!-- Data points -->
         {#each processedData as company}
           {@const esgScore = getSelectedEsgScore(company)}
           {@const isSelected = company.symbol === $globalSelectedCompany?.symbol}
           
+          <!-- Calculate exact pixel positions based on data values -->
           <div 
             class="absolute" 
             style="
-              left: {(esgScore / xMax) * 100}%;
-              bottom: {getYPosition(company.priceChange)};
-              transform: translate(-50%, -50%);
+              left: calc({(esgScore) * 100 / 100}%);
+              bottom: calc({((company.priceChange - yMin) / (yMax - yMin)) * 100}%);
+              transform: translate(-50%, 50%);
               z-index: {hoveredCompany === company || isSelected ? 9999 : 1};
             "
           >
@@ -599,8 +574,8 @@ $: insights = calculateDataInsights(processedData);
               class="point rounded-full transition-all duration-200
                 {isSelected ? 'selected-company' : ''}"
               style="
-                width: {isSelected ? '16px' : expanded ? '12px' : '10px'};  /* Increased from 12/8/6 to 16/12/10 */
-                height: {isSelected ? '16px' : expanded ? '12px' : '10px'}; /* Increased from 12/8/6 to 16/12/10 */
+                width: {isSelected ? '16px' : expanded ? '12px' : '10px'};
+                height: {isSelected ? '16px' : expanded ? '12px' : '10px'};
                 background-color: {getPointColor(company.priceChange, company.industryName)};
                 opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
                 --point-color: {getPointColor(company.priceChange, company.industryName)};
@@ -638,8 +613,31 @@ $: insights = calculateDataInsights(processedData);
             {/if}
           </div>
         {/each}
+        <!-- Y-axis ticks -->
+        {#each yTicks as tick}
+          <div
+            class="absolute left-0 w-full h-0 flex items-center"
+            style="bottom: {((tick - yMin) / (yMax - yMin)) * 100}%"
+          >
+            <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
+              {formatPriceChange(tick)}
+            </div>
+            <div class="w-full border-t border-gray-100" />
+          </div>
+        {/each}
+        <!-- X-axis ticks -->
+        {#each [0, 20, 40, 60, 80, 100] as tick}
+          <div
+            class="absolute bottom-0 h-full w-0 flex justify-center"
+            style="left: {tick}%"
+          >
+            <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
+              {tick}
+            </div>
+            <div class="h-full border-l border-gray-100" />
+          </div>
+        {/each}
       </div>
-
       <!-- Axis Labels -->
       <div class="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-600 font-medium">
         {selectedMetric === 'total' ? 'ESG Score' : 
@@ -707,6 +705,15 @@ $: insights = calculateDataInsights(processedData);
 </div>
 
 <style>
+.chart-container {
+  position: relative;
+  padding: 16px;
+}
+
+.data-point {
+  position: absolute;
+  transform-origin: center center;
+}
 .point {
   position: relative;
   transform-origin: center center;
