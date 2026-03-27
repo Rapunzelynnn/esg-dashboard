@@ -157,10 +157,6 @@ export interface IndustryAccumulator {
 export interface ProcessedCompanyData extends Company {
   relativeESG: number;
   isOutlier: boolean;
-}
-export interface ProcessedCompanyData extends Company {
-  relativeESG: number;
-  isOutlier: boolean;
   industryAvg?: number;
   industryStdDev?: number;
 }
