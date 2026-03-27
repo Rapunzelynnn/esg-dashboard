@@ -1,7 +1,8 @@
 <!-- $lib/routes/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadCompanyData, companies } from '$lib/stores';
+  import { companies, priceDataStore } from '$lib/stores';
+  import { loadAllData } from '$lib/data';
   import { Card } from '$lib/components/ui/card';
   import CompanySearch from '$lib/components/CompanySearch.svelte';
   import CompanyProfile from '$lib/components/CompanyProfile.svelte';
@@ -9,10 +10,9 @@
   import MarketCapCorrelation from '$lib/components/MarketCapCorrelation.svelte';
   import ScoreComparison from '$lib/components/ScoreComparison.svelte';
   import StockPriceCorrelation from '$lib/components/StockPriceCorrelation.svelte';
-  import type { Company, PriceData } from '$lib/types';
+  import type { PriceData } from '$lib/types';
 
   let loading = true;
-  let processedPriceData: Record<string, PriceData[]> = {};
   let activeChart = 0;
 
   const charts = [
@@ -22,46 +22,12 @@
     { id: 3, title: 'ESG vs Stock Price', icon: '📉' }
   ];
 
-  async function loadPriceData() {
-    try {
-      const response = await fetch('/processed_sp500_price_data.csv');
-      const csvData = await response.text();
-      
-      const [headerRow, ...dataRows] = csvData.split('\n');
-      const symbols = headerRow.split(',').slice(1);
-      
-      dataRows.forEach(row => {
-        if (!row.trim()) return;
-        
-        const [date, ...prices] = row.split(',');
-        prices.forEach((price, index) => {
-          const symbol = symbols[index];
-          if (!symbol || !price) return;
-          
-          if (!processedPriceData[symbol]) {
-            processedPriceData[symbol] = [];
-          }
-          
-          const numPrice = parseFloat(price);
-          if (!isNaN(numPrice)) {
-            processedPriceData[symbol].push({
-              date,
-              price: numPrice
-            });
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Error loading price data:', error);
-    }
-  }
+  // Convert Map to Record for StockPriceCorrelation prop compatibility
+  $: priceDataRecord = Object.fromEntries($priceDataStore) as Record<string, PriceData[]>;
 
   onMount(async () => {
     try {
-      await Promise.all([
-        loadCompanyData(),
-        loadPriceData()
-      ]);
+      await loadAllData();
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -114,7 +80,7 @@
         {:else if activeChart === 3}
           <StockPriceCorrelation 
             data={$companies} 
-            priceData={processedPriceData}
+            priceData={priceDataRecord}
             expanded={false} 
           />
         {/if}
