@@ -271,6 +271,12 @@ git add src/lib/data/
 git commit -m "feat: add src/lib/data module with csvParser, priceLoader, and loadAllData"
 ```
 
+### Stage 2 Code Review
+
+**Skill:** `superpowers:requesting-code-review`
+**Scope:** `src/lib/data/` (three new files only)
+**Focus:** Verify pure functions have no side effects, types match what Stage 3 will consume (`Company[]`, `Map<string, PriceData[]>`), and no imports from `$lib/stores` snuck in.
+
 ---
 
 ## Stage 3 — Rewire Stores and Components
@@ -472,6 +478,16 @@ Then open `http://localhost:5173` and verify:
 git add src/lib/stores/index.ts src/routes/+page.svelte src/lib/components/StockPriceChart.svelte
 git commit -m "refactor: wire data module into stores and components"
 ```
+
+### Stage 3 Code Review
+
+**Skill:** `superpowers:requesting-code-review`
+**Scope:** All four modified files: `src/lib/stores/index.ts`, `src/routes/+page.svelte`, `src/lib/components/StockPriceChart.svelte`, `src/lib/components/StockPriceCorrelation.svelte` (if touched)
+**Focus:** This is the highest-risk stage — verify:
+- `stores/index.ts` exports only declarations; no parsing logic remains
+- `+page.svelte` calls `loadAllData()` exactly once in `onMount`; no local fetch calls remain
+- `StockPriceChart.svelte` reads from `$priceDataStore` only; no `loadPriceData` import or fetch call remains
+- `priceDataRecord` reactive statement correctly converts `Map` → `Record` for `StockPriceCorrelation` prop
 
 ---
 
