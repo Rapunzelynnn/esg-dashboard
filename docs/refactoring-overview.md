@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-27
 **Branch strategy:** `main` (stable) → `dev` (integration) → feature branches → back to `dev` → `main`
-**Status:** Planning complete, implementation not started
+**Status:** Phase 1 complete, merged to `dev`
 
 ---
 
@@ -22,13 +22,13 @@ Single-page SvelteKit app visualizing S&P 500 ESG data. Data is public and updat
 
 ## Phase Execution Order
 
-| Phase | Branch | Scope | Depends On |
-|-------|--------|-------|------------|
-| 0 | — | Set up `dev` branch (done) | — |
-| 1 | `refactor/data-layer` | Fix loading bugs, consolidate data module | — |
-| 2 | `refactor/svelte5-migration` | Full Svelte 4 → 5 rewrite | Phase 1 |
-| 3 | `refactor/d3-charts` | Replace Chart.js analysis charts with D3 | Phase 2 |
-| 4 | `chore/github-actions-data-update` | Python scraper + GitHub Actions workflow | Independent |
+| Phase | Branch | Scope | Depends On | Status |
+|-------|--------|-------|------------|--------|
+| 0 | — | Set up `dev` branch (done) | — | **Done** |
+| 1 | `refactor/data-layer` | Fix loading bugs, consolidate data module | — | **Done** |
+| 2 | `refactor/svelte5-migration` | Full Svelte 4 → 5 rewrite | Phase 1 | Pending |
+| 3 | `refactor/d3-charts` | Replace Chart.js analysis charts with D3 | Phase 2 | Pending |
+| 4 | `chore/github-actions-data-update` | Python scraper + GitHub Actions workflow | Independent | Pending |
 
 Each phase: branch from `dev` → implement → PR into `dev` → when all phases stable → merge `dev` into `main`.
 
@@ -63,7 +63,14 @@ scripts/
 - Duplicate `ProcessedCompanyData` declaration in `types.ts`
 
 ### Detailed plan
-→ Write at start of Phase 1 session using `writing-plans` skill
+→ See `docs/superpowers/plans/2026-03-27-data-layer.md`
+
+### Completion
+Merged to `dev` on 2026-03-27. All four stages implemented:
+1. Dead code removal (duplicate `ProcessedCompanyData`, unused `dataLoader.ts`)
+2. Created `src/lib/data/` module (`csvParser.ts`, `priceLoader.ts`, `index.ts`)
+3. Rewired stores and components — single `loadAllData()` call on mount
+4. Cleaned debug statements, verified production build
 
 ---
 
