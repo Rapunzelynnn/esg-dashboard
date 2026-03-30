@@ -7,13 +7,13 @@
 ## ✅ Session Status
 
 **Branch:** `refactor/svelte5-migration`
-**Progress:** 1 of 16 tasks complete
+**Progress:** 2 of 16 tasks complete
 
 | # | Task | Status | Commit |
 |---|------|--------|--------|
 | 1 | Upgrade dependencies + config | ✅ done | `chore: upgrade to Svelte 5 and tooling` |
-| 2 | Create state module | ⬜ next | — |
-| 3 | Migrate card UI components (6 files) | ⬜ | — |
+| 2 | Create state module | ✅ done | `refactor: replace stores with Svelte 5 state module` |
+| 3 | Migrate card UI components (6 files) | ⬜ next | — |
 | 4 | Migrate ESGScores.svelte | ⬜ | — |
 | 5 | Migrate FilterPanel.svelte | ⬜ | — |
 | 6 | Migrate CompanySearch.svelte | ⬜ | — |
