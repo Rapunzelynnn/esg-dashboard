@@ -2,12 +2,10 @@
 	import type { HTMLAttributes } from "svelte/elements";
 	import { cn } from "$lib/utils.js";
 
-	type $$Props = HTMLAttributes<HTMLDivElement>;
-
-	let className: $$Props["class"] = undefined;
-	export { className as class };
+	interface Props extends HTMLAttributes<HTMLDivElement> {}
+	let { class: className, children, ...rest }: Props = $props();
 </script>
 
-<div class={cn("p-6", className)} {...$$restProps}>
-	<slot />
+<div class={cn("p-6", className)} {...rest}>
+	{@render children?.()}
 </div>
