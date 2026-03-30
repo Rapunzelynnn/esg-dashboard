@@ -1,14 +1,15 @@
 <script lang="ts">
-    import { writable } from 'svelte/store';
-    
-    export let esgScores: {
-        total: number;
-        environmental: { score: number; mean: number; max: number };
-        social: { score: number; mean: number; max: number };
-        governance: { score: number; mean: number; max: number };
-    };
-    export let showTotal = true;
-    export let showBreakdown = true;
+    interface Props {
+        esgScores: {
+            total: number;
+            environmental: { score: number; mean: number; max: number };
+            social: { score: number; mean: number; max: number };
+            governance: { score: number; mean: number; max: number };
+        };
+        showTotal?: boolean;
+        showBreakdown?: boolean;
+    }
+    let { esgScores, showTotal = true, showBreakdown = true }: Props = $props();
 
     type CategoryKey = 'environmental' | 'social' | 'governance';
     const categories: CategoryKey[] = ['environmental', 'social', 'governance'];
@@ -22,42 +23,14 @@
     }
 
     const scoreRanges: ScoreRange[] = [
-        {
-            min: 80,
-            max: 100,
-            label: 'Excellent',
-            color: 'bg-blue-500',  
-            description: 'Significantly above industry average, demonstrating leadership'
-        },
-        {
-            min: 65,
-            max: 79.99,
-            label: 'Very Good',
-            color: 'bg-cyan-500', 
-            description: 'Above industry average, showing strong performance'
-        },
-        {
-            min: 50,
-            max: 64.99,
-            label: 'Good',
-            color: 'bg-teal-500',     
-            description: 'Around industry average, meeting standards'
-        },
-        {
-            min: 35,
-            max: 49.99,
-            label: 'Fair',
-            color: 'bg-amber-500',    
-            description: 'Below industry average, improvement needed'
-        },
-        {
-            min: 0,
-            max: 34.99,
-            label: 'Poor',
-            color: 'bg-red-500',     
-            description: 'Significantly below industry average'
-        }
+        { min: 80, max: 100, label: 'Excellent', color: 'bg-blue-500', description: 'Significantly above industry average, demonstrating leadership' },
+        { min: 65, max: 79.99, label: 'Very Good', color: 'bg-cyan-500', description: 'Above industry average, showing strong performance' },
+        { min: 50, max: 64.99, label: 'Good', color: 'bg-teal-500', description: 'Around industry average, meeting standards' },
+        { min: 35, max: 49.99, label: 'Fair', color: 'bg-amber-500', description: 'Below industry average, improvement needed' },
+        { min: 0, max: 34.99, label: 'Poor', color: 'bg-red-500', description: 'Significantly below industry average' }
     ];
+
+    let activeTooltip = $state<string | null>(null);
 
     function formatScore(score: number): string {
         if (!score || isNaN(score)) return '0.0';
@@ -77,7 +50,6 @@
         const meanPercentage = (mean / max) * 100;
         const scorePercentage = (score / max) * 100;
         const relativePosition = ((scorePercentage - meanPercentage) / meanPercentage) * 100;
-
         if (relativePosition >= 50) return scoreRanges[0];
         else if (relativePosition >= 20) return scoreRanges[1];
         else if (relativePosition >= -20) return scoreRanges[2];
@@ -94,8 +66,6 @@
         const direction = score > mean ? 'above' : 'below';
         return `${Math.abs(Number(difference))}% ${direction} industry average`;
     }
-
-    let activeTooltip = writable<string | null>(null);
 </script>
 
 {#if showTotal}
@@ -179,10 +149,10 @@
                     <button
                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         aria-label="Show details for {getCategoryLabel(category)} score"
-                        on:mouseenter={() => $activeTooltip = category}
-                        on:mouseleave={() => $activeTooltip = null}
-                        on:focus={() => $activeTooltip = category}
-                        on:blur={() => $activeTooltip = null}
+                        onmouseenter={() => activeTooltip = category}
+                        onmouseleave={() => activeTooltip = null}
+                        onfocus={() => activeTooltip = category}
+                        onblur={() => activeTooltip = null}
                     />
                 </div>
 
@@ -206,7 +176,7 @@
                 </div>
 
                 <!-- Hover Tooltip -->
-                {#if $activeTooltip === category}
+                {#if activeTooltip === category}
                     <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
                         {rating.description}
                     </div>
