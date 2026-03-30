@@ -14,8 +14,8 @@
 | 1 | Upgrade dependencies + config | ✅ done | `chore: upgrade to Svelte 5 and tooling` |
 | 2 | Create state module | ✅ done | `refactor: replace stores with Svelte 5 state module` |
 | 3 | Migrate card UI components (6 files) | ✅ done | `refactor: migrate card UI components to Svelte 5` |
-| 4 | Migrate ESGScores.svelte | ⬜ next | — |
-| 5 | Migrate FilterPanel.svelte | ⬜ | — |
+| 4 | Migrate ESGScores.svelte | ✅ done | `refactor: migrate ESGScores to Svelte 5` |
+| 5 | Migrate FilterPanel.svelte | ⬜ next | — |
 | 6 | Migrate CompanySearch.svelte | ⬜ | — |
 | 7 | Migrate StockPriceChart.svelte | ⬜ | — |
 | 8 | Migrate CompanyProfile.svelte | ⬜ | — |
