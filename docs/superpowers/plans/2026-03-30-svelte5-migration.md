@@ -11,40 +11,91 @@
 **Branch:** `refactor/svelte5-migration`
 **Last commit:** `chore: upgrade to Svelte 5 and tooling`
 
-### Next Session Prompt
+---
+
+## 📋 Task 2 — Session Prompt (paste this into your next chat)
 
 ```
-## NEW SESSION CONTEXT
+## NEW SESSION CONTEXT — Task 2
 
 ### What We're Doing
-Executing Phase 2 of the ESG Dashboard refactor: migrating the entire codebase from Svelte 4 to Svelte 5 runes (no legacy mode). We are on branch `refactor/svelte5-migration`.
+Phase 2 Svelte 5 migration of the ESG Dashboard. We are on branch `refactor/svelte5-migration`.
+Tasks are done one per chat. Task 1 is committed. **This chat does Task 2 only.**
 
-### Critical Context
-- **Project:** `/Users/lynn.peng/Documents/GitHub/esg-dashboard`
-- **Branch:** `refactor/svelte5-migration`
-- **Migration plan (all tasks + exact code):** `docs/superpowers/plans/2026-03-30-svelte5-migration.md`
-- **Svelte-chartjs** kept as-is for Phase 2
-- **FilterState** migrated as-is — do NOT wire it to charts
-
-### Current Situation
-Task 1 is complete and committed (`chore: upgrade to Svelte 5 and tooling`).
-- Svelte 5, svelte-check 4, @sveltejs/vite-plugin-svelte 4, @sveltejs/kit 2.16 are installed
-
-### The Goal Right Now
-**Execute Task 2 only**, then commit, then update the plan's "Session Status" section for the next chat.
-
-**Task 2: Create the state module**
-1. Create `src/lib/state.svelte.ts` (exact code is in the plan file under Task 2 Step 1)
-2. Replace `src/lib/data/index.ts` content (exact code is in the plan file under Task 2 Step 2)
-3. Delete `src/lib/stores/index.ts`
-4. Run: `npm run check 2>&1 | grep -E "state|stores|data" | head -20` (expect no errors in these new files — other components will still have old-syntax errors, that's OK)
-5. Commit: `git add src/lib/state.svelte.ts src/lib/data/index.ts && git rm src/lib/stores/index.ts && git commit -m "refactor: replace stores with Svelte 5 state module"`
-6. Update the "Session Status" section in the plan file for the next chat (Task 3)
-
-### Important Notes
-- `npm install` must be run with `--legacy-peer-deps` if ever re-installing
-- `$state` is a rune — no import needed
+### Project
+- Path: `/Users/lynn.peng/Documents/GitHub/esg-dashboard`
+- Plan file (all tasks + exact code): `docs/superpowers/plans/2026-03-30-svelte5-migration.md`
 - Commit style: lowercase imperative, no Co-Authored-By, under 60 chars
+- `npm install` requires `--legacy-peer-deps`
+
+### Task 2: Create the state module
+
+Steps (exact file contents are in the plan under "Task 2"):
+
+1. Create `src/lib/state.svelte.ts` using the code in Task 2 Step 1.
+   Note: `$state` is a rune — no import line needed.
+
+2. Replace all of `src/lib/data/index.ts` with the code in Task 2 Step 2.
+
+3. Delete `src/lib/stores/index.ts`:
+   `rm src/lib/stores/index.ts`
+
+4. Verify:
+   `npm run check 2>&1 | grep -E "(state\.svelte|stores/index|data/index)" | head -20`
+   Expected: no errors referencing these files (other components still have old-syntax errors — that's fine).
+
+5. Commit:
+   `git add src/lib/state.svelte.ts src/lib/data/index.ts && git rm src/lib/stores/index.ts && git commit -m "refactor: replace stores with Svelte 5 state module"`
+
+6. Update the plan file's "Session Status" section by replacing the content between the two `---` lines that follow the `## ✅ Session Status` heading with this exact text:
+
+---
+**Completed tasks:** Tasks 1–2
+**Next task:** Task 3 — Migrate 6 card UI components in `src/lib/components/ui/card/`
+**Branch:** `refactor/svelte5-migration`
+**Last commit:** `refactor: replace stores with Svelte 5 state module`
+
+## 📋 Task 3 — Session Prompt (paste this into your next chat)
+
+\`\`\`
+## NEW SESSION CONTEXT — Task 3
+
+### What We're Doing
+Phase 2 Svelte 5 migration of the ESG Dashboard. We are on branch `refactor/svelte5-migration`.
+Tasks are done one per chat. Tasks 1–2 are committed. **This chat does Task 3 only.**
+
+### Project
+- Path: `/Users/lynn.peng/Documents/GitHub/esg-dashboard`
+- Plan file (all tasks + exact code): `docs/superpowers/plans/2026-03-30-svelte5-migration.md`
+- Commit style: lowercase imperative, no Co-Authored-By, under 60 chars
+
+### Task 3: Migrate 6 card UI components
+
+All files are in `src/lib/components/ui/card/`. Exact code for each is in the plan under "Task 3".
+The pattern is identical for all 6: replace `$$Props`/`$$restProps`/`<slot />` with Svelte 5 equivalents.
+
+Files to rewrite (in order):
+1. `card.svelte`
+2. `card-content.svelte`
+3. `card-header.svelte`
+4. `card-footer.svelte`
+5. `card-description.svelte`
+6. `card-title.svelte`
+
+After all 6 are rewritten:
+- Verify: `npm run check 2>&1 | grep "card" | head -20` (expect no errors in card files)
+- Commit: `git add src/lib/components/ui/card/ && git commit -m "refactor: migrate card components to Svelte 5"`
+- Update the plan's Session Status section for Task 4 (same pattern as this handoff)
+
+### Key Svelte 4 → 5 changes for these components
+- `$$Props` → `interface Props extends HTMLAttributes<HTMLDivElement> {}`
+- `$$restProps` → `...rest` from `$props()`
+- `<slot />` → `{@render children?.()}`
+- `export let class` → `let { class: className, children, ...rest }: Props = $props()`
+\`\`\`
+---
+
+   Then commit the plan file: `git add docs/superpowers/plans/2026-03-30-svelte5-migration.md && git commit -m "docs: mark task 2 complete, add task 3 prompt"`
 ```
 
 ---
