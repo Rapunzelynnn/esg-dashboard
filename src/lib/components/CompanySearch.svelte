@@ -1,24 +1,26 @@
 <!-- $lib/components/CompanySearch -->
 <script lang="ts">
-	import { companies, selectedCompany } from '$lib/stores';
+	import { appState } from '$lib/state.svelte';
 	import type { Company } from '$lib/types';
 
-	let searchTerm = '';
+	let searchTerm = $state('');
 
-	$: filteredCompanies = searchTerm
-		? $companies
-				.filter((company) => {
-					const searchLower = searchTerm.toLowerCase();
-					const symbolLower = (company.symbol || '').toLowerCase();
-					const fullNameLower = (company.fullName || '').toLowerCase();
-					const combinedNameLower = `${symbolLower} ${fullNameLower}`.toLowerCase();
-					return combinedNameLower.includes(searchLower);
-				})
-				.slice(0, 5)
-		: [];
+	let filteredCompanies = $derived(
+		searchTerm
+			? appState.companies
+					.filter((company) => {
+						const searchLower = searchTerm.toLowerCase();
+						const symbolLower = (company.symbol || '').toLowerCase();
+						const fullNameLower = (company.fullName || '').toLowerCase();
+						const combinedNameLower = `${symbolLower} ${fullNameLower}`.toLowerCase();
+						return combinedNameLower.includes(searchLower);
+					})
+					.slice(0, 5)
+			: []
+	);
 
 	function selectCompany(company: Company) {
-		selectedCompany.set(company);
+		appState.selectedCompany = company;
 		searchTerm = '';
 	}
 </script>
@@ -38,7 +40,7 @@
 			{#each filteredCompanies as company}
 				<button
 					class="w-full px-4 py-2 text-left hover:bg-gray-100"
-					on:click={() => selectCompany(company)}
+					onclick={() => selectCompany(company)}
 				>
 					<div class="flex justify-between items-center">
 						<span class="font-semibold">{company.fullName}</span>
