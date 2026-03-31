@@ -7,7 +7,7 @@
 ## ✅ Session Status
 
 **Branch:** `refactor/svelte5-migration`
-**Progress:** 8 of 16 tasks complete
+**Progress:** 9 of 16 tasks complete
 
 | # | Task | Status | Commit |
 |---|------|--------|--------|
@@ -19,8 +19,8 @@
 | 6 | Migrate CompanySearch.svelte | ✅ done | `refactor: migrate CompanySearch to Svelte 5` |
 | 7 | Migrate StockPriceChart.svelte | ✅ done | `refactor: migrate StockPriceChart to Svelte 5` |
 | 8 | Migrate CompanyProfile.svelte | ✅ done | `refactor: migrate CompanyProfile to Svelte 5` |
-| 9 | Migrate ESGIndustryAnalysis.svelte | ⬜ next | — |
-| 10 | Migrate MarketCapCorrelation.svelte | ⬜ | — |
+| 9 | Migrate ESGIndustryAnalysis.svelte | ✅ done | `refactor: migrate ESGIndustryAnalysis to Svelte 5` |
+| 10 | Migrate MarketCapCorrelation.svelte | ⬜ next | — |
 | 11 | Migrate ScoreComparison.svelte | ⬜ | — |
 | 12 | Migrate StockPriceCorrelation.svelte | ⬜ | — |
 | 13 | Migrate DashboardLayout.svelte | ⬜ | — |
