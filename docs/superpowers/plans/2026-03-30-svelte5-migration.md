@@ -21,8 +21,8 @@
 | 8 | Migrate CompanyProfile.svelte | ✅ done | `refactor: migrate CompanyProfile to Svelte 5` |
 | 9 | Migrate ESGIndustryAnalysis.svelte | ✅ done | `refactor: migrate ESGIndustryAnalysis to Svelte 5` |
 | 10 | Migrate MarketCapCorrelation.svelte | ✅ done | `refactor: migrate MarketCapCorrelation to Svelte 5` |
-| 11 | Migrate ScoreComparison.svelte | ⬜ next | — |
-| 12 | Migrate StockPriceCorrelation.svelte | ⬜ | — |
+| 11 | Migrate ScoreComparison.svelte | ✅ | refactor: migrate ScoreComparison to Svelte 5 |
+| 12 | Migrate StockPriceCorrelation.svelte | ⬜ next | — |
 | 13 | Migrate DashboardLayout.svelte | ⬜ | — |
 | 14 | Migrate +layout.svelte | ⬜ | — |
 | 15 | Migrate +page.svelte | ⬜ | — |
@@ -1251,7 +1251,7 @@ Replace all store references in template:
 
 **File:** `src/lib/components/ScoreComparison.svelte`
 
-- [ ] **Step 1: Replace the entire `<script>` block**
+- [x] **Step 1: Replace the entire `<script>` block**
 
 ```svelte
 <script lang="ts">
@@ -1417,7 +1417,7 @@ function isSelectedCompany(company: Company): boolean {
 </script>
 ```
 
-- [ ] **Step 2: Update template event handlers**
+- [x] **Step 2: Update template event handlers**
 
 Same replacements as Task 10:
 - `on:click={...}` → `onclick={...}`
