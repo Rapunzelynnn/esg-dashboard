@@ -2,170 +2,136 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
 import type { Company, PriceData } from '$lib/types';
-import { selectedCompany as globalSelectedCompany } from '$lib/stores';
-import { onMount } from 'svelte';
+import { appState } from '$lib/state.svelte';
 
-// Types and Interfaces
-interface ProcessedCompany extends Company {
-  priceChange: number;
-}
+// Types
+interface ProcessedCompany extends Company { priceChange: number; }
 
 // Props
-export let data: Company[] = [];
-export let priceData: Record<string, PriceData[]> = {};
-export let expanded = false;
+interface Props {
+  data?: Company[];
+  priceData?: Record<string, PriceData[]>;
+  expanded?: boolean;
+}
+let { data = [], priceData = {}, expanded = false }: Props = $props();
 
-// State Management
-let selectedIndustries = new Set<string>();
-let searchTerm = '';
-let hoveredCompany: ProcessedCompany | null = null;
-let selectedMetric: 'total' | 'environmental' | 'social' | 'governance' = 'total';
-let yAxisScale = 'linear';
-let showDropdown = false;
-let yMin = -100;
-let yMax = 800;
+// State
+let selectedIndustries = $state(new Set<string>());
+let searchTerm = $state('');
+let hoveredCompany = $state<ProcessedCompany | null>(null);
+let selectedMetric = $state<'total' | 'environmental' | 'social' | 'governance'>('total');
+let yAxisScale = $state('linear');
+let showDropdown = $state(false);
+let yMin = $state(-100);
+let yMax = $state(800);
 
 // Constants
-const categoryOrder = [
-  'Information Technology',
-  'Communication Services',
-  'Financials',
-  'Industrials',
-  'Consumer Discretionary',
-  'Consumer Staples',
-  'Health Care',
-  'Energy',
-  'Materials',
-  'Utilities'
-];
-
-// Industry category mapping with color schemes
+const categoryOrder = ['Information Technology','Communication Services','Financials','Industrials','Consumer Discretionary','Consumer Staples','Health Care','Energy','Materials','Utilities'];
 const industryCategories = {
-  'Information Technology': {
-    base: '#2563EB', // blue base
-    industries: [
-      { name: 'Software', shade: '#2563EB' },         // blue-600
-      { name: 'IT Services', shade: '#1D4ED8' },      // blue-700
-      { name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },  // blue-800
-      { name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },       // blue-500
-      { name: 'Communications Equipment', shade: '#60A5FA' },      // blue-400
-      { name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }   // blue-600
-    ]
-  },
-  'Communication Services': {
-    base: '#EA580C', // orange base
-    industries: [
-      { name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' }, // orange-600
-      { name: 'Media, Movies & Entertainment', shade: '#C2410C' },                    // orange-700
-      { name: 'Telecommunication Services', shade: '#9A3412' }                        // orange-800
-    ]
-  },
-  'Financials': {
-    base: '#059669', // emerald base
-    industries: [
-      { name: 'Banks', shade: '#059669' },                // emerald-600
-      { name: 'Diversified Financial Services and Capital Markets', shade: '#047857' }, // emerald-700
-      { name: 'Insurance', shade: '#065F46' },            // emerald-800
-      { name: 'Real Estate Management & Development', shade: '#10B981' },  // emerald-500
-      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }  // emerald-400
-    ]
-  },
-  'Industrials': {
-    base: '#DC2626', // red base
-    industries: [
-      { name: 'Aerospace & Defense', shade: '#DC2626' },        // red-600
-      { name: 'Airlines', shade: '#B91C1C' },                   // red-700
-      { name: 'Building Products', shade: '#991B1B' },          // red-800
-      { name: 'Machinery and Electrical Equipment', shade: '#EF4444' },    // red-500
-      { name: 'Electrical Components & Equipment', shade: '#F87171' },     // red-400
-      { name: 'Trading Companies & Distributors', shade: '#DC2626' },      // red-600
-      { name: 'Professional Services', shade: '#B91C1C' },                 // red-700
-      { name: 'Commercial Services & Supplies', shade: '#991B1B' },        // red-800
-      { name: 'Construction & Engineering', shade: '#EF4444' },            // red-500
-      { name: 'Transportation and Transportation Infrastructure', shade: '#F87171' }, // red-400
-      { name: 'Auto Components', shade: '#DC2626' }                        // red-600
-    ]
-  },
-  'Consumer Discretionary': {
-    base: '#D97706', // amber base
-    industries: [
-      { name: 'Automobiles', shade: '#D97706' },        // amber-600
-      { name: 'Retailing', shade: '#B45309' },          // amber-700
-      { name: 'Restaurants & Leisure Facilities', shade: '#92400E' },  // amber-800
-      { name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },    // amber-500
-      { name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' }, // amber-400
-      { name: 'Homebuilding', shade: '#D97706' },        // amber-600
-      { name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },  // amber-700
-      { name: 'Casinos & Gaming', shade: '#92400E' },    // amber-800
-      { name: 'Household Durables', shade: '#F59E0B' }   // amber-500
-    ]
-  },
-  'Consumer Staples': {
-    base: '#DB2777', // pink base
-    industries: [
-      { name: 'Food Products', shade: '#DB2777' },          // pink-600
-      { name: 'Food & Staples Retailing', shade: '#BE185D' }, // pink-700
-      { name: 'Household Products', shade: '#9D174D' },     // pink-800
-      { name: 'Personal Products', shade: '#EC4899' },      // pink-500
-      { name: 'Beverages', shade: '#F472B6' },             // pink-400
-      { name: 'Tobacco', shade: '#DB2777' }                // pink-600
-    ]
-  },
-  'Health Care': {
-    base: '#0284C7', // sky blue base
-    industries: [
-      { name: 'Biotechnology', shade: '#0284C7' },        // sky-600
-      { name: 'Pharmaceuticals', shade: '#0369A1' },      // sky-700
-      { name: 'Health Care Equipment & Supplies', shade: '#075985' },  // sky-800
-      { name: 'Health Care Providers & Services', shade: '#0EA5E9' },  // sky-500
-      { name: 'Life Sciences Tools & Services', shade: '#38BDF8' }     // sky-400
-    ]
-  },
-  'Energy': {
-    base: '#0D9488', // teal base
-    industries: [
-      { name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },  // teal-600
-      { name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' }, // teal-700
-      { name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },   // teal-800
-      { name: 'Energy Equipment & Services', shade: '#14B8A6' }       // teal-500
-    ]
-  },
-  'Materials': {
-    base: '#65A30D', // lime base
-    industries: [
-      { name: 'Chemicals', shade: '#65A30D' },           // lime-600
-      { name: 'Construction Materials', shade: '#4D7C0F' }, // lime-700
-      { name: 'Metals & Mining', shade: '#3F6212' },     // lime-800
-      { name: 'Containers & Packaging', shade: '#84CC16' }, // lime-500
-      { name: 'Steel', shade: '#A3E635' }               // lime-400
-    ]
-  },
-  'Utilities': {
-    base: '#CA8A04', // yellow base
-    industries: [
-      { name: 'Electric Utilities', shade: '#CA8A04' },         // yellow-600
-      { name: 'Gas Utilities', shade: '#A16207' },              // yellow-700
-      { name: 'Multi and Water Utilities', shade: '#854D0E' }   // yellow-800
-    ]
-  }
+  'Information Technology': { base: '#2563EB', industries: [{ name: 'Software', shade: '#2563EB' },{ name: 'IT Services', shade: '#1D4ED8' },{ name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },{ name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },{ name: 'Communications Equipment', shade: '#60A5FA' },{ name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }] },
+  'Communication Services': { base: '#EA580C', industries: [{ name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' },{ name: 'Media, Movies & Entertainment', shade: '#C2410C' },{ name: 'Telecommunication Services', shade: '#9A3412' }] },
+  'Financials': { base: '#059669', industries: [{ name: 'Banks', shade: '#059669' },{ name: 'Diversified Financial Services and Capital Markets', shade: '#047857' },{ name: 'Insurance', shade: '#065F46' },{ name: 'Real Estate Management & Development', shade: '#10B981' },{ name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }] },
+  'Industrials': { base: '#DC2626', industries: [{ name: 'Aerospace & Defense', shade: '#DC2626' },{ name: 'Airlines', shade: '#B91C1C' },{ name: 'Building Products', shade: '#991B1B' },{ name: 'Machinery and Electrical Equipment', shade: '#EF4444' },{ name: 'Electrical Components & Equipment', shade: '#F87171' },{ name: 'Trading Companies & Distributors', shade: '#DC2626' },{ name: 'Professional Services', shade: '#B91C1C' },{ name: 'Commercial Services & Supplies', shade: '#991B1B' },{ name: 'Construction & Engineering', shade: '#EF4444' },{ name: 'Transportation and Transportation Infrastructure', shade: '#F87171' },{ name: 'Auto Components', shade: '#DC2626' }] },
+  'Consumer Discretionary': { base: '#D97706', industries: [{ name: 'Automobiles', shade: '#D97706' },{ name: 'Retailing', shade: '#B45309' },{ name: 'Restaurants & Leisure Facilities', shade: '#92400E' },{ name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },{ name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' },{ name: 'Homebuilding', shade: '#D97706' },{ name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },{ name: 'Casinos & Gaming', shade: '#92400E' },{ name: 'Household Durables', shade: '#F59E0B' }] },
+  'Consumer Staples': { base: '#DB2777', industries: [{ name: 'Food Products', shade: '#DB2777' },{ name: 'Food & Staples Retailing', shade: '#BE185D' },{ name: 'Household Products', shade: '#9D174D' },{ name: 'Personal Products', shade: '#EC4899' },{ name: 'Beverages', shade: '#F472B6' },{ name: 'Tobacco', shade: '#DB2777' }] },
+  'Health Care': { base: '#0284C7', industries: [{ name: 'Biotechnology', shade: '#0284C7' },{ name: 'Pharmaceuticals', shade: '#0369A1' },{ name: 'Health Care Equipment & Supplies', shade: '#075985' },{ name: 'Health Care Providers & Services', shade: '#0EA5E9' },{ name: 'Life Sciences Tools & Services', shade: '#38BDF8' }] },
+  'Energy': { base: '#0D9488', industries: [{ name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },{ name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' },{ name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },{ name: 'Energy Equipment & Services', shade: '#14B8A6' }] },
+  'Materials': { base: '#65A30D', industries: [{ name: 'Chemicals', shade: '#65A30D' },{ name: 'Construction Materials', shade: '#4D7C0F' },{ name: 'Metals & Mining', shade: '#3F6212' },{ name: 'Containers & Packaging', shade: '#84CC16' },{ name: 'Steel', shade: '#A3E635' }] },
+  'Utilities': { base: '#CA8A04', industries: [{ name: 'Electric Utilities', shade: '#CA8A04' },{ name: 'Gas Utilities', shade: '#A16207' },{ name: 'Multi and Water Utilities', shade: '#854D0E' }] }
 };
 
-// Data Processing Functions
+// Derived
+let categorizedIndustries = $derived(
+  new Set(Object.values(industryCategories).flatMap(cat => cat.industries.map(i => i.name)))
+);
+
+let industries = $derived(
+  [...new Set(data.map(d => d.industryName))]
+    .filter(industry => categorizedIndustries.has(industry))
+    .sort((a, b) => {
+      const getCatForIndustry = (n: string) =>
+        Object.entries(industryCategories).find(([_, cat]) => cat.industries.some(i => i.name === n))?.[0] ?? '';
+      const catA = getCatForIndustry(a);
+      const catB = getCatForIndustry(b);
+      if (catA !== catB) return categoryOrder.indexOf(catA) - categoryOrder.indexOf(catB);
+      const cat = industryCategories[catA as keyof typeof industryCategories];
+      if (cat) return cat.industries.findIndex(i => i.name === a) - cat.industries.findIndex(i => i.name === b);
+      return a.localeCompare(b);
+    })
+);
+
+let colorScale = $derived(new Map(industries.map(industry => [industry, getIndustryColor(industry)])));
+
+let relevantIndustries = $derived(new Set<string>((() => {
+  if (!appState.selectedCompany) return industries;
+  const selectedCategory = Object.entries(industryCategories)
+    .find(([_, cat]) => cat.industries.some(i => i.name === appState.selectedCompany!.industryName))?.[0];
+  if (!selectedCategory) return new Set([appState.selectedCompany.industryName]);
+  return industryCategories[selectedCategory as keyof typeof industryCategories]
+    .industries.map(i => i.name).filter(name => industries.includes(name));
+})()));
+
+let processedData = $derived(
+  data.map(company => ({
+    ...company,
+    priceChange: priceData[company.symbol] ? calculatePriceChange(priceData[company.symbol]) ?? 0 : 0
+  })).filter(company => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      company.fullName.toLowerCase().includes(searchLower) ||
+      company.symbol.toLowerCase().includes(searchLower);
+    const matchesIndustry = selectedIndustries.size === 0 || selectedIndustries.has(company.industryName);
+    return matchesSearch && matchesIndustry;
+  }) as ProcessedCompany[]
+);
+
+let xMax = $derived(Math.max(...processedData.map(d => getSelectedEsgScore(d))));
+
+let yTicks = $derived(generateYAxisTicks(yMin, yMax));
+
+let statistics = $derived(processedData.length >= 3 ? {
+  stats: { quartiles: calculateQuartiles(processedData) }
+} : null);
+
+let visibleIndustries = $derived(appState.selectedCompany ? [...relevantIndustries] : industries);
+
+let insights = $derived(calculateDataInsights(processedData));
+
+// Sync selected industries + yMin/yMax
+$effect(() => {
+  if (appState.selectedCompany) {
+    const relatedInds = [...relevantIndustries];
+    if (relatedInds.length > 0) selectedIndustries = new Set(relatedInds);
+  }
+});
+
+$effect(() => {
+  const prices = processedData.map(d => d.priceChange);
+  if (prices.length > 0) {
+    yMin = Math.floor(Math.min(...prices) / 10) * 10;
+    yMax = Math.ceil(Math.max(...prices) / 10) * 10;
+  }
+});
+
+// Click outside handler
+$effect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (showDropdown) {
+      const dropdown = document.querySelector('.industry-dropdown');
+      if (!dropdown?.contains(event.target as Node)) showDropdown = false;
+    }
+  };
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+});
+
+// Functions
 function calculatePriceChange(prices: PriceData[]): number | null {
   if (!prices || prices.length < 2) return null;
-  
-  const sortedPrices = [...prices].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-
-  const firstPrice = sortedPrices[0].price;
-  const lastPrice = sortedPrices[sortedPrices.length - 1].price;
-  
-  return ((lastPrice - firstPrice) / firstPrice) * 100;
+  const sorted = [...prices].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return ((sorted[sorted.length - 1].price - sorted[0].price) / sorted[0].price) * 100;
 }
 
-
-// Utility Functions
 function generateYAxisTicks(min: number, max: number): number[] {
   const step = (max - min) / 8;
   return Array.from({ length: 9 }, (_, i) => min + step * i);
@@ -185,8 +151,8 @@ function formatPriceChange(value: number): string {
 }
 
 function getIndustryColor(industryName: string): string {
-  for (const [_, category] of Object.entries(industryCategories)) {
-    const industry = category.industries.find(i => i.name === industryName);
+  for (const [_, cat] of Object.entries(industryCategories)) {
+    const industry = cat.industries.find(i => i.name === industryName);
     if (industry) return industry.shade;
   }
   return '#94A3B8';
@@ -199,166 +165,24 @@ function getYPosition(value: number): string {
   return `${((value - yMin) / (yMax - yMin)) * 100}%`;
 }
 
-// Industry Selection Functions
 function selectAll() {
-  selectedIndustries = new Set($globalSelectedCompany 
-    ? [...relevantIndustries]
-    : industries
-  );
+  selectedIndustries = new Set(appState.selectedCompany ? [...relevantIndustries] : industries);
 }
 
 function clearAll() {
-  selectedIndustries = new Set($globalSelectedCompany 
-    ? [$globalSelectedCompany.industryName]
-    : []
-  );
+  selectedIndustries = new Set(appState.selectedCompany ? [appState.selectedCompany.industryName] : []);
 }
 
 function toggleIndustry(industry: string) {
-  if ($globalSelectedCompany?.industryName === industry) return;
+  if (appState.selectedCompany?.industryName === industry) return;
   selectedIndustries = new Set(selectedIndustries);
-  selectedIndustries.has(industry) 
-    ? selectedIndustries.delete(industry)
-    : selectedIndustries.add(industry);
+  selectedIndustries.has(industry) ? selectedIndustries.delete(industry) : selectedIndustries.add(industry);
 }
 
 function handleDropdownClick(event: MouseEvent) {
   event.stopPropagation();
   showDropdown = !showDropdown;
 }
-
-// Reactive Declarations
-$: processedData = data
-  .map(company => ({
-    ...company,
-    priceChange: priceData[company.symbol] 
-      ? calculatePriceChange(priceData[company.symbol]) ?? 0
-      : 0
-  }))
-  .filter(company => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || 
-      company.fullName.toLowerCase().includes(searchLower) ||
-      company.symbol.toLowerCase().includes(searchLower);
-    const matchesIndustry = selectedIndustries.size === 0 || 
-      selectedIndustries.has(company.industryName);
-    return matchesSearch && matchesIndustry;
-  }) as ProcessedCompany[];
-
-$: {
-  const prices = processedData.map(d => d.priceChange);
-  yMin = Math.floor(Math.min(...prices) / 10) * 10;
-  yMax = Math.ceil(Math.max(...prices) / 10) * 10;
-}
-
-$: xMax = Math.max(...processedData.map(d => getSelectedEsgScore(d)));
-$: yTicks = generateYAxisTicks(yMin, yMax);
-
-$: statistics = processedData.length >= 3 ? {
-  stats: {
-    quartiles: calculateQuartiles(processedData)
-  }
-} : null;
-
-$: colorScale = new Map(industries.map(industry => [
-  industry,
-  getIndustryColor(industry)
-]));
-
-$: categorizedIndustries = new Set(
-  Object.values(industryCategories).flatMap(category => 
-    category.industries.map(industry => industry.name)
-  )
-);
-
-$: industries = [...new Set(data.map(d => d.industryName))]
-  .filter(industry => categorizedIndustries.has(industry))
-  .sort((a, b) => {
-    const getCategoryForIndustry = (industryName: string) => 
-      Object.entries(industryCategories).find(([_, category]) => 
-        category.industries.some(i => i.name === industryName)
-      )?.[0] ?? '';
-
-    const categoryA = getCategoryForIndustry(a);
-    const categoryB = getCategoryForIndustry(b);
-
-    if (categoryA !== categoryB) {
-      return categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB);
-    }
-
-    const category = industryCategories[categoryA as keyof typeof industryCategories];
-    if (category) {
-      return category.industries.findIndex(i => i.name === a) - 
-             category.industries.findIndex(i => i.name === b);
-    }
-
-    return a.localeCompare(b);
-  });
-
-$: relevantIndustries = new Set<string>((() => {
-  if (!$globalSelectedCompany) return industries;
-  
-  const selectedCategory = Object.entries(industryCategories).find(([_, category]) => 
-    category.industries.some(i => i.name === $globalSelectedCompany.industryName)
-  )?.[0];
-
-  if (!selectedCategory) return new Set([$globalSelectedCompany.industryName]);
-
-  return industryCategories[selectedCategory as keyof typeof industryCategories]
-    .industries.map(i => i.name)
-    .filter(name => industries.includes(name));
-})());
-
-$: if ($globalSelectedCompany) {
-  const relatedInds = [...relevantIndustries];
-  if (relatedInds.length > 0) {
-    selectedIndustries = new Set(relatedInds);
-  }
-}
-
-$: visibleIndustries = $globalSelectedCompany 
-  ? [...relevantIndustries]
-  : industries;
-
-// Lifecycle
-onMount(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (showDropdown) {
-      const dropdown = document.querySelector('.industry-dropdown');
-      if (!dropdown?.contains(event.target as Node)) {
-        showDropdown = false;
-      }
-    }
-  };
-
-  document.addEventListener('click', handleClickOutside);
-  return () => document.removeEventListener('click', handleClickOutside);
-});
-
-// Initialize selected industries when component mounts or company changes
-$: if ($globalSelectedCompany) {
-  const relatedInds = [...relevantIndustries];
-  if (relatedInds.length > 0) {
-    selectedIndustries = new Set(relatedInds);
-  }
-}
-
-onMount(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (showDropdown) {
-      const dropdown = document.querySelector('.industry-dropdown');
-      if (!dropdown?.contains(event.target as Node)) {
-        showDropdown = false;
-      }
-    }
-  };
-
-  document.addEventListener('click', handleClickOutside);
-  return () => {
-    document.removeEventListener('click', handleClickOutside);
-  };
-});
-
 
 function getPointColor(priceChange: number, industry: string): string {
   return colorScale.get(industry) || '#808080';
@@ -367,70 +191,39 @@ function getPointColor(priceChange: number, industry: string): string {
 function calculateQuartiles(data: ProcessedCompany[]) {
   const sortedEsg = [...data].sort((a, b) => getSelectedEsgScore(a) - getSelectedEsgScore(b));
   const sortedPrice = [...data].sort((a, b) => a.priceChange - b.priceChange);
-  
   return {
-    esg: {
-      min: getSelectedEsgScore(sortedEsg[0]),
-      max: getSelectedEsgScore(sortedEsg[sortedEsg.length - 1])
-    },
-    price: {
-      min: sortedPrice[0].priceChange,
-      max: sortedPrice[sortedPrice.length - 1].priceChange
-    }
+    esg: { min: getSelectedEsgScore(sortedEsg[0]), max: getSelectedEsgScore(sortedEsg[sortedEsg.length - 1]) },
+    price: { min: sortedPrice[0].priceChange, max: sortedPrice[sortedPrice.length - 1].priceChange }
   };
 }
 
-// Add functions to calculate data insights
 function calculateDataInsights(data: ProcessedCompany[]) {
-    if (data.length === 0) return null;
-
-    const esgScores = data.map(d => getSelectedEsgScore(d));
-    const priceChanges = data.map(d => d.priceChange);
-
-    const esgMin = Math.min(...esgScores);
-    const esgMax = Math.max(...esgScores);
-    const esgRange = `${Math.floor(esgMin)}-${Math.ceil(esgMax)}`;
-
-    const priceMin = Math.min(...priceChanges);
-    const priceMax = Math.max(...priceChanges);
-    const priceRange = `${priceMin.toFixed(1)}% and ${priceMax.toFixed(1)}%`;
-
-    const highEsgCompanies = data.filter(d => getSelectedEsgScore(d) > 60);
-    const highEsgAvgPerformance = highEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / highEsgCompanies.length;
-    const lowEsgCompanies = data.filter(d => getSelectedEsgScore(d) <= 60);
-    const lowEsgAvgPerformance = lowEsgCompanies.reduce((sum, co) => sum + co.priceChange, 0) / lowEsgCompanies.length;
-    
-    const performanceTrend = highEsgAvgPerformance > lowEsgAvgPerformance ? 'positive' : 'negative';
-
-    const correlation = Math.abs(calculateCorrelation(esgScores, priceChanges));
-    const predictiveStrength = correlation > 0.5 ? 'strong' : correlation > 0.3 ? 'moderate' : 'weak';
-
-    return {
-        esgRange,
-        priceRange,
-        performanceTrend,
-        predictiveStrength
-    };
+  if (data.length === 0) return null;
+  const esgScores = data.map(d => getSelectedEsgScore(d));
+  const priceChanges = data.map(d => d.priceChange);
+  const esgRange = `${Math.floor(Math.min(...esgScores))}-${Math.ceil(Math.max(...esgScores))}`;
+  const priceRange = `${Math.min(...priceChanges).toFixed(1)}% and ${Math.max(...priceChanges).toFixed(1)}%`;
+  const highEsgAvg = data.filter(d => getSelectedEsgScore(d) > 60).reduce((s, c) => s + c.priceChange, 0) / (data.filter(d => getSelectedEsgScore(d) > 60).length || 1);
+  const lowEsgAvg = data.filter(d => getSelectedEsgScore(d) <= 60).reduce((s, c) => s + c.priceChange, 0) / (data.filter(d => getSelectedEsgScore(d) <= 60).length || 1);
+  const correlation = Math.abs(calculateCorrelation(esgScores, priceChanges));
+  return {
+    esgRange,
+    priceRange,
+    performanceTrend: highEsgAvg > lowEsgAvg ? 'positive' : 'negative',
+    predictiveStrength: correlation > 0.5 ? 'strong' : correlation > 0.3 ? 'moderate' : 'weak'
+  };
 }
 
-
-// Add correlation calculation if not already present
 function calculateCorrelation(xs: number[], ys: number[]): number {
   const xMean = xs.reduce((a, b) => a + b) / xs.length;
   const yMean = ys.reduce((a, b) => a + b) / ys.length;
-  
   const numerator = xs.reduce((sum, x, i) => sum + (x - xMean) * (ys[i] - yMean), 0);
   const denominator = Math.sqrt(
     xs.reduce((sum, x) => sum + Math.pow(x - xMean, 2), 0) *
     ys.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0)
   );
-  
   return numerator / denominator;
 }
-
-// Add reactive declaration for insights
-$: insights = calculateDataInsights(processedData);
-
 </script>
 
 <div class="w-full space-y-4">
@@ -453,15 +246,15 @@ $: insights = calculateDataInsights(processedData);
   <div class="flex flex-col space-y-2">
     <!-- Control buttons and dropdown -->
     <div class="flex flex-wrap gap-2 items-center">
-      <button 
+      <button
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={selectAll}
+        onclick={selectAll}
       >
         Select All
       </button>
-      <button 
+      <button
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={clearAll}
+        onclick={clearAll}
       >
         Clear All
       </button>
@@ -470,7 +263,7 @@ $: insights = calculateDataInsights(processedData);
       <div class="relative">
         <button
           class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
-          on:click|stopPropagation={handleDropdownClick}
+          onclick={handleDropdownClick}
         >
           <span>More Industries</span>
           <span class="text-xs">▼</span>
@@ -479,7 +272,7 @@ $: insights = calculateDataInsights(processedData);
         {#if showDropdown}
           <div 
             class="industry-dropdown absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
-            on:click|stopPropagation={() => {}}
+            onclick={(e) => e.stopPropagation()}
           >
             <div class="p-4 space-y-4">
               <input
@@ -504,7 +297,7 @@ $: insights = calculateDataInsights(processedData);
                         {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
                           <button
                             class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            on:click={() => toggleIndustry(industry)}
+                            onclick={() => toggleIndustry(industry)}
                           >
                             <div class="flex items-center flex-1">
                               <div
@@ -535,8 +328,8 @@ $: insights = calculateDataInsights(processedData);
         <button
           class="px-3 py-1 text-sm rounded-full transition-all duration-200 flex items-center space-x-2
             bg-gray-800 text-white hover:bg-gray-700
-            {$globalSelectedCompany?.industryName === industry ? 'ring-2 ring-blue-500' : ''}"
-          on:click={() => toggleIndustry(industry)}
+            {appState.selectedCompany?.industryName === industry ? 'ring-2 ring-blue-500' : ''}"
+          onclick={() => toggleIndustry(industry)}
         >
           <div
             class="w-2 h-2 rounded-full"
@@ -557,7 +350,7 @@ $: insights = calculateDataInsights(processedData);
         <!-- Data points -->
         {#each processedData as company}
           {@const esgScore = getSelectedEsgScore(company)}
-          {@const isSelected = company.symbol === $globalSelectedCompany?.symbol}
+          {@const isSelected = company.symbol === appState.selectedCompany?.symbol}
           
           <!-- Calculate exact pixel positions based on data values -->
           <div 
@@ -577,12 +370,12 @@ $: insights = calculateDataInsights(processedData);
                 width: {isSelected ? '16px' : expanded ? '12px' : '10px'};
                 height: {isSelected ? '16px' : expanded ? '12px' : '10px'};
                 background-color: {getPointColor(company.priceChange, company.industryName)};
-                opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
+                opacity: {appState.selectedCompany && !isSelected ? '0.6' : '1'};
                 --point-color: {getPointColor(company.priceChange, company.industryName)};
                 {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${getPointColor(company.priceChange, company.industryName)}` : ''};
               "
-              on:mouseenter={() => hoveredCompany = company}
-              on:mouseleave={() => hoveredCompany = null}
+              onmouseenter={() => hoveredCompany = company}
+              onmouseleave={() => hoveredCompany = null}
             />
 
             {#if hoveredCompany === company}
