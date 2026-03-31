@@ -1,6 +1,6 @@
 <!-- $lib/components/CompanyProfile.svelte -->
 <script lang="ts">
-    import { selectedCompany } from '$lib/stores';
+    import { appState } from '$lib/state.svelte';
     import StockPriceChart from './StockPriceChart.svelte';
     import ESGScores from './ESGScores.svelte';
 
@@ -14,13 +14,9 @@
 
     function formatMarketCap(value: number): string {
         if (!value || isNaN(value)) return '$0.00';
-        if (value >= 1_000_000_000_000) {
-            return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
-        } else if (value >= 1_000_000_000) {
-            return `$${(value / 1_000_000_000).toFixed(2)} billion`;
-        } else if (value >= 1_000_000) {
-            return `$${(value / 1_000_000_000).toFixed(2)} million`;
-        }
+        if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
+        if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)} billion`;
+        if (value >= 1_000_000) return `$${(value / 1_000_000_000).toFixed(2)} million`;
         return `$${value.toFixed(2)}`;
     }
 
@@ -30,7 +26,7 @@
     }
 </script>
 
-{#if $selectedCompany}
+{#if appState.selectedCompany}
     <div class="bg-white p-3 rounded-xl shadow-sm border-b">
         <div class="grid grid-cols-12 gap-4">
             <!-- Left Column -->
@@ -38,13 +34,13 @@
                 <!-- Company Header -->
                 <div class="mb-2">
                     <h2 class="text-xl font-bold text-gray-900 leading-tight">
-                        {$selectedCompany?.fullName || 'No Name'}
+                        {appState.selectedCompany?.fullName || 'No Name'}
                     </h2>
                     <div class="text-sm text-gray-600 leading-tight">
-                        {$selectedCompany?.industryCode || 'No Code'} - {$selectedCompany?.industryName || 'No Industry'}
+                        {appState.selectedCompany?.industryCode || 'No Code'} - {appState.selectedCompany?.industryName || 'No Industry'}
                     </div>
                     <div class="text-sm text-blue-600 font-semibold leading-tight">
-                        {$selectedCompany?.symbol || 'No Symbol'}
+                        {appState.selectedCompany?.symbol || 'No Symbol'}
                     </div>
                 </div>
 
@@ -53,13 +49,13 @@
                     <div class="bg-gray-50 p-2 rounded-lg">
                         <div class="text-xs text-gray-600">Market Cap</div>
                         <div class="text-base font-bold text-gray-900">
-                            {formatMarketCap($selectedCompany.marketCap)}
+                            {formatMarketCap(appState.selectedCompany.marketCap)}
                         </div>
                     </div>
                     <div class="bg-gray-50 p-2 rounded-lg">
                         <div class="text-xs text-gray-600">Beta</div>
                         <div class="text-base font-bold text-gray-900">
-                            {formatBeta($selectedCompany.beta)}
+                            {formatBeta(appState.selectedCompany.beta)}
                         </div>
                     </div>
                 </div>
@@ -67,7 +63,7 @@
                 <!-- Stock Price Chart - Using flex-1 to fill remaining space -->
                 <div class="flex-1 min-h-0 overflow-hidden">
                     <div class="h-full w-full"> <!-- Changed to h-full -->
-                        <StockPriceChart symbol={$selectedCompany.symbol} />
+                        <StockPriceChart symbol={appState.selectedCompany.symbol} />
                     </div>
                 </div>
             </div>
@@ -85,7 +81,7 @@
                 <div class="flex gap-6 items-center">
                     <!-- Total Score Circle -->
                     <div class="flex-none">
-                        <ESGScores esgScores={$selectedCompany.esgScores} showBreakdown={false} />
+                        <ESGScores esgScores={appState.selectedCompany.esgScores} showBreakdown={false} />
                     </div>
                     <!-- Breakdown Section -->
                     <div class="flex-1">
@@ -109,7 +105,7 @@
                             </div>
                         </div>
                         <!-- Breakdown Bars -->
-                        <ESGScores esgScores={$selectedCompany.esgScores} showTotal={false} />
+                        <ESGScores esgScores={appState.selectedCompany.esgScores} showTotal={false} />
                     </div>
                 </div>
             </div>
