@@ -22,8 +22,8 @@
 | 9 | Migrate ESGIndustryAnalysis.svelte | ✅ done | `refactor: migrate ESGIndustryAnalysis to Svelte 5` |
 | 10 | Migrate MarketCapCorrelation.svelte | ✅ done | `refactor: migrate MarketCapCorrelation to Svelte 5` |
 | 11 | Migrate ScoreComparison.svelte | ✅ | refactor: migrate ScoreComparison to Svelte 5 |
-| 12 | Migrate StockPriceCorrelation.svelte | ⬜ next | — |
-| 13 | Migrate DashboardLayout.svelte | ⬜ | — |
+| 12 | Migrate StockPriceCorrelation.svelte | ✅ | refactor: migrate StockPriceCorrelation to Svelte 5 |
+| 13 | Migrate DashboardLayout.svelte | ⬜ next | — |
 | 14 | Migrate +layout.svelte | ⬜ | — |
 | 15 | Migrate +page.svelte | ⬜ | — |
 | 16 | Final verification + commit | ⬜ | — |
