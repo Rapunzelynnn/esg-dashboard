@@ -23,8 +23,8 @@
 | 10 | Migrate MarketCapCorrelation.svelte | ✅ done | `refactor: migrate MarketCapCorrelation to Svelte 5` |
 | 11 | Migrate ScoreComparison.svelte | ✅ | refactor: migrate ScoreComparison to Svelte 5 |
 | 12 | Migrate StockPriceCorrelation.svelte | ✅ | refactor: migrate StockPriceCorrelation to Svelte 5 |
-| 13 | Migrate DashboardLayout.svelte | ⬜ next | — |
-| 14 | Migrate +layout.svelte | ⬜ | — |
+| 13 | Migrate DashboardLayout.svelte | ✅ | refactor: migrate DashboardLayout to Svelte 5 |
+| 14 | Migrate +layout.svelte | ⬜ next | — |
 | 15 | Migrate +page.svelte | ⬜ | — |
 | 16 | Final verification + commit | ⬜ | — |
 
@@ -1678,7 +1678,7 @@ Same pattern as Tasks 10–11:
 
 Key changes: `bind:this` stays the same in Svelte 5, `onMount` with cleanup → `$effect` with cleanup return, `<slot />` → `{@render children()}`.
 
-- [ ] **Step 1: Replace the entire file**
+- [x] **Step 1: Replace the entire file**
 
 ```svelte
 <!-- $lib/components/DashboardLayout.svelte -->
