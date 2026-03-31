@@ -17,8 +17,8 @@
 | 4 | Migrate ESGScores.svelte | ✅ done | `refactor: migrate ESGScores to Svelte 5` |
 | 5 | Migrate FilterPanel.svelte | ✅ done | `refactor: migrate FilterPanel to Svelte 5` |
 | 6 | Migrate CompanySearch.svelte | ✅ done | `refactor: migrate CompanySearch to Svelte 5` |
-| 7 | Migrate StockPriceChart.svelte | ⬜ next | — |
-| 8 | Migrate CompanyProfile.svelte | ⬜ | — |
+| 7 | Migrate StockPriceChart.svelte | ✅ done | `refactor: migrate StockPriceChart to Svelte 5` |
+| 8 | Migrate CompanyProfile.svelte | ⬜ next | — |
 | 9 | Migrate ESGIndustryAnalysis.svelte | ⬜ | — |
 | 10 | Migrate MarketCapCorrelation.svelte | ⬜ | — |
 | 11 | Migrate ScoreComparison.svelte | ⬜ | — |
