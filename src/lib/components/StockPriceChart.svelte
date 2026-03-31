@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { priceDataStore } from '$lib/stores';
+    import { appState } from '$lib/state.svelte';
     import type { PriceData, StockChartOptions } from '$lib/types';
     import { Line } from 'svelte-chartjs';
     import {
@@ -18,8 +18,11 @@
 
     ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale);
 
-    export let symbol: string;
-    let data: ChartData<'line', Point[], unknown> | undefined = undefined;
+    interface Props {
+        symbol: string;
+    }
+    let { symbol }: Props = $props();
+    let data = $state<ChartData<'line', Point[], unknown> | undefined>(undefined);
 
     const options: StockChartOptions = {
         responsive: true,
@@ -85,7 +88,9 @@
         };
     }
 
-    $: if (symbol) buildChartData(symbol, $priceDataStore);
+    $effect(() => {
+        if (symbol) buildChartData(symbol, appState.priceData);
+    });
 </script>
 
 <div class="bg-white rounded-lg h-full">
