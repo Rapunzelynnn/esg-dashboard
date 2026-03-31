@@ -24,8 +24,8 @@
 | 11 | Migrate ScoreComparison.svelte | ✅ | refactor: migrate ScoreComparison to Svelte 5 |
 | 12 | Migrate StockPriceCorrelation.svelte | ✅ | refactor: migrate StockPriceCorrelation to Svelte 5 |
 | 13 | Migrate DashboardLayout.svelte | ✅ | refactor: migrate DashboardLayout to Svelte 5 |
-| 14 | Migrate +layout.svelte | ⬜ next | — |
-| 15 | Migrate +page.svelte | ⬜ | — |
+| 14 | Migrate +layout.svelte | ✅ | refactor: migrate +layout.svelte to Svelte 5 |
+| 15 | Migrate +page.svelte | ⬜ next | — |
 | 16 | Final verification + commit | ⬜ | — |
 
 ---
