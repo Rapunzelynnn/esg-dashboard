@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { FilterState } from '../types';
-  
-  export let localFilter: FilterState;
+
+  interface Props {
+    localFilter: FilterState;
+  }
+  let { localFilter }: Props = $props();
 </script>
 
 <div class="mb-4">
