@@ -289,11 +289,11 @@ function isSelectedCompany(company: Company): boolean {
           <div
             class="absolute w-full border-t border-gray-100"
             style="bottom: {tick}%"
-          />
+          ></div>
           <div
             class="absolute h-full border-l border-gray-100"
             style="left: {tick}%"
-          />
+          ></div>
         {/each}
 
         <!-- Data points -->
@@ -316,6 +316,7 @@ function isSelectedCompany(company: Company): boolean {
               <!-- Point button -->
               <button
                 type="button"
+                aria-label="{company.fullName} ({company.symbol})"
                 class="point rounded-full transition-all duration-200
                   {hoveredCompany === company ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
                   {isSelected ? 'selected-company' : ''}"
@@ -329,7 +330,7 @@ function isSelectedCompany(company: Company): boolean {
                 "
                 onmouseenter={() => hoveredCompany = company}
                 onmouseleave={() => hoveredCompany = null}
-              />
+              ></button>
 
 
               <!-- Tooltip (hover only) -->
@@ -371,7 +372,7 @@ function isSelectedCompany(company: Company): boolean {
               <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
                 {getTickLabel(tick)}
               </div>
-              <div class="w-full border-t border-gray-100" />
+              <div class="w-full border-t border-gray-100"></div>
             </div>
           {/each}
 
@@ -384,7 +385,7 @@ function isSelectedCompany(company: Company): boolean {
               <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
                 {getTickLabel(tick)}
               </div>
-              <div class="h-full border-l border-gray-100" />
+              <div class="h-full border-l border-gray-100"></div>
             </div>
           {/each}
 
@@ -529,18 +530,4 @@ function isSelectedCompany(company: Company): boolean {
   isolation: isolate;
 }
 
-/* Add these styles to properly position the axis labels */
-.chart-area {
-  position: relative;
-  isolation: isolate;
-  margin: 1rem 0;
-}
-
-/* Ensure labels don't overlap with chart content */
-.axis-label {
-  position: absolute;
-  font-size: 0.875rem;
-  color: #4B5563;
-  white-space: nowrap;
-}
 </style>

@@ -54,7 +54,6 @@
   let selectedIndustries = $state(new Set<string>());
   let searchTerm = $state('');
   let showDropdown = $state(false);
-  let initialized = $state(false);
   let tooltipContent = $state<TooltipContent>({ visible: false, score: 0, type: 'environmental', industryName: '' });
 
   // Derived
@@ -90,24 +89,12 @@
       })
   );
 
-  // Initialize selected industries when data/company changes
+  // Update selected industries when selected company or data changes
   $effect(() => {
     if (appState.selectedCompany && industries.length > 0) {
-      if (!initialized) {
-        selectedIndustries = getRelatedIndustries(appState.selectedCompany.industryName);
-        initialized = true;
-      }
-    } else if (industries.length > 0 && !initialized) {
-      selectedIndustries = new Set(industries);
-      initialized = true;
-    }
-  });
-
-  // Reset when selected company changes
-  $effect(() => {
-    if (appState.selectedCompany) {
       selectedIndustries = getRelatedIndustries(appState.selectedCompany.industryName);
-      initialized = true;
+    } else if (industries.length > 0) {
+      selectedIndustries = new Set(industries);
     }
   });
 
@@ -375,10 +362,10 @@
       <!-- Grid lines -->
       <div class="absolute left-16 right-0 top-0 h-full">
         {#each gridLines as value}
-          <div 
-            class="absolute w-full border-t border-gray-200" 
+          <div
+            class="absolute w-full border-t border-gray-200"
             style="top: {getGridLinePosition(value)}"
-          />
+          ></div>
         {/each}
       </div>
     </div>
@@ -407,7 +394,7 @@
                   onmouseenter={() => showTooltip(industry.environmental, 'environmental', industry.industryName)}
                   onmouseleave={hideTooltip}
                 >
-                  <div class="absolute inset-0 {getBarColor('environmental')} transition-all duration-200 group-hover:opacity-80" />
+                  <div class="absolute inset-0 {getBarColor('environmental')} transition-all duration-200 group-hover:opacity-80"></div>
                   
                   <!-- Tooltip using Tailwind classes -->
                   {#if tooltipContent.visible && tooltipContent.type === 'environmental' && tooltipContent.industryName === industry.industryName}
@@ -430,7 +417,7 @@
                   onmouseenter={() => showTooltip(industry.social, 'social', industry.industryName)}
                   onmouseleave={hideTooltip}
                 >
-                  <div class="absolute inset-0 {getBarColor('social')} transition-all duration-200 group-hover:opacity-80" />
+                  <div class="absolute inset-0 {getBarColor('social')} transition-all duration-200 group-hover:opacity-80"></div>
                   
                   <!-- Tooltip using Tailwind classes -->
                   {#if tooltipContent.visible && tooltipContent.type === 'social' && tooltipContent.industryName === industry.industryName}
@@ -453,7 +440,7 @@
                   onmouseenter={() => showTooltip(industry.governance, 'governance', industry.industryName)}
                   onmouseleave={hideTooltip}
                 >
-                  <div class="absolute inset-0 {getBarColor('governance')} transition-all duration-200 group-hover:opacity-80" />
+                  <div class="absolute inset-0 {getBarColor('governance')} transition-all duration-200 group-hover:opacity-80"></div>
                   
                   <!-- Tooltip using Tailwind classes -->
                   {#if tooltipContent.visible && tooltipContent.type === 'governance' && tooltipContent.industryName === industry.industryName}

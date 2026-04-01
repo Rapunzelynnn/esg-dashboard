@@ -154,13 +154,6 @@
     color: white;
   }
 
-  .content-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 600px; /* Ensure minimum height */
-  }
-
   .centered-message {
     display: flex;
     justify-content: center;

@@ -142,7 +142,7 @@
                         <div
                             class="h-full rounded-full {getScoreColor(categoryData.score, categoryData.mean, categoryData.max)} transition-all duration-200"
                             style="width: {(categoryData.score / categoryData.max) * 100}%"
-                        />
+                        ></div>
                     </div>
 
                     <!-- Invisible button for interaction -->
@@ -153,7 +153,7 @@
                         onmouseleave={() => activeTooltip = null}
                         onfocus={() => activeTooltip = category}
                         onblur={() => activeTooltip = null}
-                    />
+                    ></button>
                 </div>
 
                 <!-- Sector Average Marker with Text -->

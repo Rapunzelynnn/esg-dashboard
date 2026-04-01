@@ -146,7 +146,7 @@ function formatMarketCap(value: number): string {
   if (!value || isNaN(value)) return '$0.00';
   if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
   if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)} billion`;
-  if (value >= 1_000_000) return `$${(value / 1_000_000_000).toFixed(2)} million`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)} million`;
   return `$${value.toFixed(2)}`;
 }
 
@@ -240,9 +240,12 @@ function formatXAxisLabel(value: number): string {
         </button>
 
         {#if showDropdown}
-          <div 
+          <div
             class="absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
+            role="menu"
+            tabindex="-1"
             onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
           >
             <div class="p-4 space-y-4">
               <!-- Search input -->
@@ -317,17 +320,18 @@ function formatXAxisLabel(value: number): string {
 
 
   <!-- Chart container -->
-  <section 
-    class="relative chart-area ml-12" 
+  <section
+    class="relative chart-area ml-12"
     style="height: {height}px;"
-    role="region"
     aria-label="ESG Score vs Market Cap Chart"
   >
-    <button
+    <div
       class="absolute inset-0 w-full h-full transparent-button"
+      role="button"
+      tabindex="0"
       onclick={handleChartClick}
       onkeydown={(e) => {
-        if (e.key === 'Escape') selectedCompany = null;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') handleChartClick();
       }}
       aria-label="Clear selection"
     >
@@ -345,7 +349,6 @@ function formatXAxisLabel(value: number): string {
                 <span
                   class="absolute right-0 text-sm text-gray-600 pr-2"
                   style="bottom: {(value / maxScore) * 100}%"
-                  role="text"
                 >
                   {value}
                 </span>
@@ -355,7 +358,6 @@ function formatXAxisLabel(value: number): string {
                 <span
                   class="absolute right-0 text-sm text-gray-600 pr-2"
                   style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
-                  role="text"
                 >
                   {value}σ
                 </span>
@@ -368,7 +370,6 @@ function formatXAxisLabel(value: number): string {
         <div 
           class="absolute text-sm text-gray-600"
           style="left: -3rem; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: left top;"
-          role="text"
         >
           {viewMode === 'absolute' ? 'ESG Score' : 'ESG Score (Standard Deviations from Industry Mean)'}
         </div>
@@ -395,7 +396,6 @@ function formatXAxisLabel(value: number): string {
         <!-- X-axis label with adjusted bottom position -->
         <div
           class="absolute bottom-[-24px] left-16 right-0 text-center text-sm text-gray-600"
-          role="text"
         >
           Market Cap (Billions USD)
         </div>
@@ -408,14 +408,14 @@ function formatXAxisLabel(value: number): string {
             <div
               class="absolute w-full border-t border-gray-200"
               style="bottom: {(value / maxScore) * 100}%"
-            />
+            ></div>
           {/each}
         {:else}
           {#each [-2, 0, 2] as value}
             <div
               class="absolute w-full border-t {value === 0 ? 'border-gray-400' : 'border-gray-200'}"
               style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
-            />
+            ></div>
           {/each}
         {/if}
       </div>
@@ -435,6 +435,7 @@ function formatXAxisLabel(value: number): string {
             <!-- Point button -->
             <button
               type="button"
+              aria-label="{company.fullName} ({company.symbol})"
               class="point rounded-full transition-all duration-200
                 {hoveredPoint === company || selectedCompany === company ? 'w-5 h-5 z-20' : 'w-2.5 h-2.5 z-10'}
                 {company.isOutlier ? 'ring-2 ring-red-500' : ''}
@@ -448,7 +449,7 @@ function formatXAxisLabel(value: number): string {
               onmouseenter={() => hoveredPoint = company}
               onmouseleave={() => hoveredPoint = null}
               onclick={(e) => handlePointClick(company, e)}
-            />
+            ></button>
             <!-- Tooltip -->
             {#if hoveredPoint === company || selectedCompany === company}
               <div
@@ -493,7 +494,7 @@ function formatXAxisLabel(value: number): string {
         {/each}
       </div>
     </div>
-  </button>
+  </div>
 </section>
 
   <!-- Statistics Panel -->

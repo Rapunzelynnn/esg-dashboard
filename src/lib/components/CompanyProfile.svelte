@@ -16,7 +16,7 @@
         if (!value || isNaN(value)) return '$0.00';
         if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
         if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)} billion`;
-        if (value >= 1_000_000) return `$${(value / 1_000_000_000).toFixed(2)} million`;
+        if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)} million`;
         return `$${value.toFixed(2)}`;
     }
 

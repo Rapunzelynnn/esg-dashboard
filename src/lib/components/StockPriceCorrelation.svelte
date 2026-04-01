@@ -270,9 +270,12 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
         </button>
 
         {#if showDropdown}
-          <div 
+          <div
             class="industry-dropdown absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
+            role="menu"
+            tabindex="-1"
             onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
           >
             <div class="p-4 space-y-4">
               <input
@@ -364,6 +367,7 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
           >
             <button
               type="button"
+              aria-label="{company.fullName} ({company.symbol})"
               class="point rounded-full transition-all duration-200
                 {isSelected ? 'selected-company' : ''}"
               style="
@@ -376,7 +380,7 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
               "
               onmouseenter={() => hoveredCompany = company}
               onmouseleave={() => hoveredCompany = null}
-            />
+            ></button>
 
             {#if hoveredCompany === company}
               <div
@@ -415,7 +419,7 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
             <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
               {formatPriceChange(tick)}
             </div>
-            <div class="w-full border-t border-gray-100" />
+            <div class="w-full border-t border-gray-100"></div>
           </div>
         {/each}
         <!-- X-axis ticks -->
@@ -427,7 +431,7 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
             <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
               {tick}
             </div>
-            <div class="h-full border-l border-gray-100" />
+            <div class="h-full border-l border-gray-100"></div>
           </div>
         {/each}
       </div>
@@ -498,15 +502,6 @@ function calculateCorrelation(xs: number[], ys: number[]): number {
 </div>
 
 <style>
-.chart-container {
-  position: relative;
-  padding: 16px;
-}
-
-.data-point {
-  position: absolute;
-  transform-origin: center center;
-}
 .point {
   position: relative;
   transform-origin: center center;
