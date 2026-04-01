@@ -2,361 +2,163 @@
 <script lang="ts">
 import { fade } from 'svelte/transition';
 import type { Company } from '$lib/types';
-import { selectedCompany as globalSelectedCompany } from '$lib/stores';
-import { onMount } from 'svelte';
+import { appState } from '$lib/state.svelte';
 
-export let data: Company[] = [];
-export let expanded = false;
-
-let hoveredCompany: Company | null = null;
-let selectedIndustries = new Set<string>();
-let searchTerm = '';
-let selectedMetric: 'absolute' | 'relative' = 'absolute';
-let showDropdown = false;
-
-// Process data for visualization
-$: processedData = data.filter(company => {
-  const searchLower = searchTerm.toLowerCase();
-  const matchesSearch = !searchTerm || 
-    company.fullName.toLowerCase().includes(searchLower) ||
-    company.symbol.toLowerCase().includes(searchLower);
-    
-  // Simplified industry matching logic
-  const matchesIndustry = selectedIndustries.size === 0 || 
-    selectedIndustries.has(company.industryName);
-  
-  return matchesSearch && matchesIndustry;
-});
-
-// Get current company's category and related industries
-$: currentCategory = $globalSelectedCompany ? 
-  Object.entries(industryCategories).find(([_, category]) => 
-    category.industries.some(i => i.name === $globalSelectedCompany?.industryName)
-  )?.[0] : null;
-
-$: relatedIndustries = new Set<string>((() => {
-  if (!$globalSelectedCompany) return [];
-  
-  if (!currentCategory) return [$globalSelectedCompany.industryName];
-
-  return industryCategories[currentCategory as keyof typeof industryCategories]
-    .industries
-    .map(i => i.name)
-    .filter(name => industries.includes(name));
-})());
-
-// Calculate industry averages
-$: industryAverages = data.reduce((acc, company) => {
-  if (!acc[company.industryName]) {
-    acc[company.industryName] = {
-      envSum: 0,
-      socSum: 0,
-      govSum: 0,
-      count: 0
-    };
-  }
-  acc[company.industryName].envSum += company.esgScores.environmental.score;
-  acc[company.industryName].socSum += company.esgScores.social.score;
-  acc[company.industryName].govSum += company.esgScores.governance.score;
-  acc[company.industryName].count += 1;
-  return acc;
-}, {} as Record<string, { envSum: number; socSum: number; govSum: number; count: number; }>);
-
-
-// Add industry categorization types and data
-interface IndustryInfo {
-  name: string;
-  shade: string;
+interface Props {
+  data?: Company[];
+  expanded?: boolean;
 }
+let { data = [], expanded = false }: Props = $props();
 
-const categoryOrder = [
-  'Information Technology',
-  'Communication Services',
-  'Financials',
-  'Industrials',
-  'Consumer Discretionary',
-  'Consumer Staples',
-  'Health Care',
-  'Energy',
-  'Materials',
-  'Utilities'
-];
+// State
+let hoveredCompany = $state<Company | null>(null);
+let selectedIndustries = $state(new Set<string>());
+let searchTerm = $state('');
+let selectedMetric = $state<'absolute' | 'relative'>('absolute');
+let showDropdown = $state(false);
 
-// Industry category mapping with color schemes
+// Industry data (identical const objects — copy from original)
+interface IndustryInfo { name: string; shade: string; }
+const categoryOrder = ['Information Technology','Communication Services','Financials','Industrials','Consumer Discretionary','Consumer Staples','Health Care','Energy','Materials','Utilities'];
 const industryCategories = {
-  'Information Technology': {
-    base: '#2563EB', // blue base
-    industries: [
-      { name: 'Software', shade: '#2563EB' },         // blue-600
-      { name: 'IT Services', shade: '#1D4ED8' },      // blue-700
-      { name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },  // blue-800
-      { name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },       // blue-500
-      { name: 'Communications Equipment', shade: '#60A5FA' },      // blue-400
-      { name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }   // blue-600
-    ]
-  },
-  'Communication Services': {
-    base: '#EA580C', // orange base
-    industries: [
-      { name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' }, // orange-600
-      { name: 'Media, Movies & Entertainment', shade: '#C2410C' },                    // orange-700
-      { name: 'Telecommunication Services', shade: '#9A3412' }                        // orange-800
-    ]
-  },
-  'Financials': {
-    base: '#059669', // emerald base
-    industries: [
-      { name: 'Banks', shade: '#059669' },                // emerald-600
-      { name: 'Diversified Financial Services and Capital Markets', shade: '#047857' }, // emerald-700
-      { name: 'Insurance', shade: '#065F46' },            // emerald-800
-      { name: 'Real Estate Management & Development', shade: '#10B981' },  // emerald-500
-      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }  // emerald-400
-    ]
-  },
-  'Industrials': {
-    base: '#DC2626', // red base
-    industries: [
-      { name: 'Aerospace & Defense', shade: '#DC2626' },        // red-600
-      { name: 'Airlines', shade: '#B91C1C' },                   // red-700
-      { name: 'Building Products', shade: '#991B1B' },          // red-800
-      { name: 'Machinery and Electrical Equipment', shade: '#EF4444' },    // red-500
-      { name: 'Electrical Components & Equipment', shade: '#F87171' },     // red-400
-      { name: 'Trading Companies & Distributors', shade: '#DC2626' },      // red-600
-      { name: 'Professional Services', shade: '#B91C1C' },                 // red-700
-      { name: 'Commercial Services & Supplies', shade: '#991B1B' },        // red-800
-      { name: 'Construction & Engineering', shade: '#EF4444' },            // red-500
-      { name: 'Transportation and Transportation Infrastructure', shade: '#F87171' }, // red-400
-      { name: 'Auto Components', shade: '#DC2626' }                        // red-600
-    ]
-  },
-  'Consumer Discretionary': {
-    base: '#D97706', // amber base
-    industries: [
-      { name: 'Automobiles', shade: '#D97706' },        // amber-600
-      { name: 'Retailing', shade: '#B45309' },          // amber-700
-      { name: 'Restaurants & Leisure Facilities', shade: '#92400E' },  // amber-800
-      { name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },    // amber-500
-      { name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' }, // amber-400
-      { name: 'Homebuilding', shade: '#D97706' },        // amber-600
-      { name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },  // amber-700
-      { name: 'Casinos & Gaming', shade: '#92400E' },    // amber-800
-      { name: 'Household Durables', shade: '#F59E0B' }   // amber-500
-    ]
-  },
-  'Consumer Staples': {
-    base: '#DB2777', // pink base
-    industries: [
-      { name: 'Food Products', shade: '#DB2777' },          // pink-600
-      { name: 'Food & Staples Retailing', shade: '#BE185D' }, // pink-700
-      { name: 'Household Products', shade: '#9D174D' },     // pink-800
-      { name: 'Personal Products', shade: '#EC4899' },      // pink-500
-      { name: 'Beverages', shade: '#F472B6' },             // pink-400
-      { name: 'Tobacco', shade: '#DB2777' }                // pink-600
-    ]
-  },
-  'Health Care': {
-    base: '#0284C7', // sky blue base
-    industries: [
-      { name: 'Biotechnology', shade: '#0284C7' },        // sky-600
-      { name: 'Pharmaceuticals', shade: '#0369A1' },      // sky-700
-      { name: 'Health Care Equipment & Supplies', shade: '#075985' },  // sky-800
-      { name: 'Health Care Providers & Services', shade: '#0EA5E9' },  // sky-500
-      { name: 'Life Sciences Tools & Services', shade: '#38BDF8' }     // sky-400
-    ]
-  },
-  'Energy': {
-    base: '#0D9488', // teal base
-    industries: [
-      { name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },  // teal-600
-      { name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' }, // teal-700
-      { name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },   // teal-800
-      { name: 'Energy Equipment & Services', shade: '#14B8A6' }       // teal-500
-    ]
-  },
-  'Materials': {
-    base: '#65A30D', // lime base
-    industries: [
-      { name: 'Chemicals', shade: '#65A30D' },           // lime-600
-      { name: 'Construction Materials', shade: '#4D7C0F' }, // lime-700
-      { name: 'Metals & Mining', shade: '#3F6212' },     // lime-800
-      { name: 'Containers & Packaging', shade: '#84CC16' }, // lime-500
-      { name: 'Steel', shade: '#A3E635' }               // lime-400
-    ]
-  },
-  'Utilities': {
-    base: '#CA8A04', // yellow base
-    industries: [
-      { name: 'Electric Utilities', shade: '#CA8A04' },         // yellow-600
-      { name: 'Gas Utilities', shade: '#A16207' },              // yellow-700
-      { name: 'Multi and Water Utilities', shade: '#854D0E' }   // yellow-800
-    ]
-  }
+  'Information Technology': { base: '#2563EB', industries: [{ name: 'Software', shade: '#2563EB' },{ name: 'IT Services', shade: '#1D4ED8' },{ name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },{ name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },{ name: 'Communications Equipment', shade: '#60A5FA' },{ name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }] },
+  'Communication Services': { base: '#EA580C', industries: [{ name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' },{ name: 'Media, Movies & Entertainment', shade: '#C2410C' },{ name: 'Telecommunication Services', shade: '#9A3412' }] },
+  'Financials': { base: '#059669', industries: [{ name: 'Banks', shade: '#059669' },{ name: 'Diversified Financial Services and Capital Markets', shade: '#047857' },{ name: 'Insurance', shade: '#065F46' },{ name: 'Real Estate Management & Development', shade: '#10B981' },{ name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }] },
+  'Industrials': { base: '#DC2626', industries: [{ name: 'Aerospace & Defense', shade: '#DC2626' },{ name: 'Airlines', shade: '#B91C1C' },{ name: 'Building Products', shade: '#991B1B' },{ name: 'Machinery and Electrical Equipment', shade: '#EF4444' },{ name: 'Electrical Components & Equipment', shade: '#F87171' },{ name: 'Trading Companies & Distributors', shade: '#DC2626' },{ name: 'Professional Services', shade: '#B91C1C' },{ name: 'Commercial Services & Supplies', shade: '#991B1B' },{ name: 'Construction & Engineering', shade: '#EF4444' },{ name: 'Transportation and Transportation Infrastructure', shade: '#F87171' },{ name: 'Auto Components', shade: '#DC2626' }] },
+  'Consumer Discretionary': { base: '#D97706', industries: [{ name: 'Automobiles', shade: '#D97706' },{ name: 'Retailing', shade: '#B45309' },{ name: 'Restaurants & Leisure Facilities', shade: '#92400E' },{ name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },{ name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' },{ name: 'Homebuilding', shade: '#D97706' },{ name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },{ name: 'Casinos & Gaming', shade: '#92400E' },{ name: 'Household Durables', shade: '#F59E0B' }] },
+  'Consumer Staples': { base: '#DB2777', industries: [{ name: 'Food Products', shade: '#DB2777' },{ name: 'Food & Staples Retailing', shade: '#BE185D' },{ name: 'Household Products', shade: '#9D174D' },{ name: 'Personal Products', shade: '#EC4899' },{ name: 'Beverages', shade: '#F472B6' },{ name: 'Tobacco', shade: '#DB2777' }] },
+  'Health Care': { base: '#0284C7', industries: [{ name: 'Biotechnology', shade: '#0284C7' },{ name: 'Pharmaceuticals', shade: '#0369A1' },{ name: 'Health Care Equipment & Supplies', shade: '#075985' },{ name: 'Health Care Providers & Services', shade: '#0EA5E9' },{ name: 'Life Sciences Tools & Services', shade: '#38BDF8' }] },
+  'Energy': { base: '#0D9488', industries: [{ name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },{ name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' },{ name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },{ name: 'Energy Equipment & Services', shade: '#14B8A6' }] },
+  'Materials': { base: '#65A30D', industries: [{ name: 'Chemicals', shade: '#65A30D' },{ name: 'Construction Materials', shade: '#4D7C0F' },{ name: 'Metals & Mining', shade: '#3F6212' },{ name: 'Containers & Packaging', shade: '#84CC16' },{ name: 'Steel', shade: '#A3E635' }] },
+  'Utilities': { base: '#CA8A04', industries: [{ name: 'Electric Utilities', shade: '#CA8A04' },{ name: 'Gas Utilities', shade: '#A16207' },{ name: 'Multi and Water Utilities', shade: '#854D0E' }] }
 };
 
-// Get categorized industries
-$: categorizedIndustries = new Set(
-  Object.values(industryCategories).flatMap(category => 
-    category.industries.map(industry => industry.name)
-  )
+// Derived
+let categorizedIndustries = $derived(
+  new Set(Object.values(industryCategories).flatMap(cat => cat.industries.map(i => i.name)))
 );
 
-// Filter out uncategorized industries and sort them
-$: industries = [...new Set(data.map(d => d.industryName))]
-  .filter(industry => categorizedIndustries.has(industry))
-  .sort((a, b) => {
-    const getCategoryForIndustry = (industryName: string): string => {
-      return Object.entries(industryCategories).find(([_, category]) => 
-        category.industries.some(i => i.name === industryName)
-      )?.[0] ?? '';
-    };
+let industries = $derived(
+  [...new Set(data.map(d => d.industryName))]
+    .filter(industry => categorizedIndustries.has(industry))
+    .sort((a, b) => {
+      const getCatForIndustry = (n: string) =>
+        Object.entries(industryCategories).find(([_, cat]) => cat.industries.some(i => i.name === n))?.[0] ?? '';
+      const catA = getCatForIndustry(a);
+      const catB = getCatForIndustry(b);
+      if (catA !== catB) return categoryOrder.indexOf(catA) - categoryOrder.indexOf(catB);
+      const cat = industryCategories[catA as keyof typeof industryCategories];
+      if (cat) return cat.industries.findIndex(i => i.name === a) - cat.industries.findIndex(i => i.name === b);
+      return a.localeCompare(b);
+    })
+);
 
-    const categoryA = getCategoryForIndustry(a);
-    const categoryB = getCategoryForIndustry(b);
+let currentCategory = $derived(
+  appState.selectedCompany
+    ? Object.entries(industryCategories).find(([_, cat]) =>
+        cat.industries.some(i => i.name === appState.selectedCompany?.industryName)
+      )?.[0]
+    : null
+);
 
-    if (categoryA !== categoryB) {
-      return categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB);
+let relevantIndustries = $derived(new Set<string>((() => {
+  if (!appState.selectedCompany) return industries;
+  if (!currentCategory) return [appState.selectedCompany.industryName];
+  return industryCategories[currentCategory as keyof typeof industryCategories]
+    .industries.map(i => i.name).filter(name => industries.includes(name));
+})()));
+
+let processedData = $derived(
+  data.filter(company => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      company.fullName.toLowerCase().includes(searchLower) ||
+      company.symbol.toLowerCase().includes(searchLower);
+    const matchesIndustry = selectedIndustries.size === 0 || selectedIndustries.has(company.industryName);
+    return matchesSearch && matchesIndustry;
+  })
+);
+
+let colorScale = $derived(new Map(industries.map(industry => [industry, getIndustryColor(industry)])));
+
+let xAxisTicks = $derived(selectedMetric === 'absolute' ? [0, 20, 40, 60, 80, 100] : [-50, -25, 0, 25, 50]);
+let yAxisTicks = $derived(selectedMetric === 'absolute' ? [0, 20, 40, 60, 80, 100] : [-50, -25, 0, 25, 50]);
+
+// Sync with global company selection
+$effect(() => {
+  if (appState.selectedCompany) {
+    const relatedInds = [...relevantIndustries];
+    if (relatedInds.length > 0) selectedIndustries = new Set(relatedInds);
+  }
+});
+
+// Replace onMount click-outside with $effect
+$effect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (showDropdown) {
+      const dropdown = document.querySelector('.industry-dropdown');
+      if (!dropdown?.contains(event.target as Node)) showDropdown = false;
     }
+  };
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+});
 
-    const category = industryCategories[categoryA as keyof typeof industryCategories];
-    if (category) {
-      const indexA = category.industries.findIndex(i => i.name === a);
-      const indexB = category.industries.findIndex(i => i.name === b);
-      return indexA - indexB;
-    }
-
-    return a.localeCompare(b);
-  });
-
-// Fix relevant industries calculation
-$: relevantIndustries = new Set<string>((() => {
-  if (!$globalSelectedCompany) return industries;
-  
-  const selectedCategory = Object.entries(industryCategories).find(([_, category]) => 
-    category.industries.some(i => i.name === $globalSelectedCompany.industryName)
-  )?.[0];
-
-  if (!selectedCategory) return new Set([$globalSelectedCompany.industryName]);
-
-  return industryCategories[selectedCategory as keyof typeof industryCategories]
-    .industries.map(i => i.name)
-    .filter(name => industries.includes(name));
-})());
-
-
-// Fix industry selection functions
+// Functions
 function toggleIndustry(industry: string) {
   selectedIndustries = new Set(selectedIndustries);
   if (selectedIndustries.has(industry)) {
-    // Don't allow deselecting the current company's industry
-    if ($globalSelectedCompany?.industryName === industry) return;
+    if (appState.selectedCompany?.industryName === industry) return;
     selectedIndustries.delete(industry);
   } else {
     selectedIndustries.add(industry);
   }
 }
 
-function selectAll() {
-  selectedIndustries = new Set(industries);
-}
+function selectAll() { selectedIndustries = new Set(industries); }
 
 function clearAll() {
-  if ($globalSelectedCompany) {
-    selectedIndustries = new Set([$globalSelectedCompany.industryName]);
+  if (appState.selectedCompany) {
+    selectedIndustries = new Set([appState.selectedCompany.industryName]);
   } else {
     selectedIndustries = new Set();
   }
 }
-
-
 
 function handleDropdownClick(event: MouseEvent) {
   event.stopPropagation();
   showDropdown = !showDropdown;
 }
 
-// Update color scale to only use categorized colors
 function getIndustryColor(industryName: string): string {
-  for (const [_, category] of Object.entries(industryCategories)) {
-    const industry = category.industries.find(i => i.name === industryName);
-    if (industry) {
-      return industry.shade;
-    }
+  for (const [_, cat] of Object.entries(industryCategories)) {
+    const industry = cat.industries.find(i => i.name === industryName);
+    if (industry) return industry.shade;
   }
   return '#94A3B8';
 }
 
-$: colorScale = new Map(industries.map(industry => [
-  industry,
-  getIndustryColor(industry)
-]));
-
-
-
 function getBubbleSize(score: number): number {
-  // Define larger base sizes with more dramatic differences
-  const minSize = 6;    // Smallest size
-  const maxSize = expanded ? 32 : 24;  // Increased maximum for better contrast
-  
-  // Calculate size range with more dramatic steps
-  if (score < 20) return minSize;                   // 6px
-  if (score < 40) return minSize + 6;              // 12px
-  if (score < 60) return minSize + 12;             // 18px
-  if (score < 80) return minSize + 18;             // 24px
-  return maxSize;                                  // 32px/24px
+  const minSize = 6;
+  const maxSize = expanded ? 32 : 24;
+  if (score < 20) return minSize;
+  if (score < 40) return minSize + 6;
+  if (score < 60) return minSize + 12;
+  if (score < 80) return minSize + 18;
+  return maxSize;
 }
 
-
-// Add tick mark calculations
-$: xAxisTicks = selectedMetric === 'absolute' 
-  ? [0, 20, 40, 60, 80, 100]
-  : [-50, -25, 0, 25, 50];
-
-$: yAxisTicks = selectedMetric === 'absolute'
-  ? [0, 20, 40, 60, 80, 100]
-  : [-50, -25, 0, 25, 50];
-
 function getTickPosition(tick: number): string {
-  if (selectedMetric === 'absolute') {
-    return `${tick}%`;
-  } else {
-    return `${tick + 50}%`; // Shift the -50 to +50 range to 0 to 100
-  }
+  return selectedMetric === 'absolute' ? `${tick}%` : `${tick + 50}%`;
 }
 
 function getTickLabel(tick: number): string {
-  if (selectedMetric === 'relative') {
-    return tick > 0 ? `+${tick}%` : `${tick}%`;
-  }
-  return tick.toString();
+  return selectedMetric === 'relative' ? (tick > 0 ? `+${tick}%` : `${tick}%`) : tick.toString();
 }
-// Update isSelectedCompany function
+
 function isSelectedCompany(company: Company): boolean {
-  return $globalSelectedCompany?.symbol === company.symbol;
+  return appState.selectedCompany?.symbol === company.symbol;
 }
-
-// Initialize selected industries when component mounts or company changes
-$: if ($globalSelectedCompany) {
-  const relatedInds = [...relevantIndustries];
-  if (relatedInds.length > 0) {
-    selectedIndustries = new Set(relatedInds);
-  }
-}
-
-onMount(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (showDropdown) {
-      const dropdown = document.querySelector('.industry-dropdown');
-      if (!dropdown?.contains(event.target as Node)) {
-        showDropdown = false;
-      }
-    }
-  };
-
-  document.addEventListener('click', handleClickOutside);
-  return () => {
-    document.removeEventListener('click', handleClickOutside);
-  };
-});
 </script>
 
 <div class="w-full space-y-4">
@@ -380,15 +182,15 @@ onMount(() => {
   <div class="flex flex-col space-y-2">
     <!-- Control buttons and dropdown -->
     <div class="flex flex-wrap gap-2 items-center">
-      <button 
+      <button
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={selectAll}
+        onclick={selectAll}
       >
         Select All
       </button>
-      <button 
+      <button
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={clearAll}
+        onclick={clearAll}
       >
         Clear All
       </button>
@@ -397,16 +199,19 @@ onMount(() => {
       <div class="relative">
         <button
           class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
-          on:click|stopPropagation={handleDropdownClick}
+          onclick={handleDropdownClick}
         >
           <span>More Industries</span>
           <span class="text-xs">▼</span>
         </button>
 
         {#if showDropdown}
-          <div 
+          <div
             class="industry-dropdown absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
-            on:click|stopPropagation={() => {}}
+            onclick={(e) => e.stopPropagation()}
+            role="menu"
+            tabindex="-1"
+            onkeydown={() => {}}
           >
             <div class="p-4 space-y-4">
               <input
@@ -431,7 +236,7 @@ onMount(() => {
                         {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
                           <button
                             class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            on:click={() => toggleIndustry(industry)}
+                            onclick={() => toggleIndustry(industry)}
                           >
                             <div class="flex items-center flex-1">
                               <div
@@ -462,8 +267,8 @@ onMount(() => {
         <button
           class="px-3 py-1 text-sm rounded-full transition-all duration-200 flex items-center space-x-2
             bg-gray-800 text-white hover:bg-gray-700
-            {$globalSelectedCompany?.industryName === industry ? 'ring-2 ring-blue-500' : ''}"
-          on:click={() => toggleIndustry(industry)}
+            {appState.selectedCompany?.industryName === industry ? 'ring-2 ring-blue-500' : ''}"
+          onclick={() => toggleIndustry(industry)}
         >
           <div
             class="w-2 h-2 rounded-full"
@@ -484,11 +289,11 @@ onMount(() => {
           <div
             class="absolute w-full border-t border-gray-100"
             style="bottom: {tick}%"
-          />
+          ></div>
           <div
             class="absolute h-full border-l border-gray-100"
             style="left: {tick}%"
-          />
+          ></div>
         {/each}
 
         <!-- Data points -->
@@ -511,6 +316,7 @@ onMount(() => {
               <!-- Point button -->
               <button
                 type="button"
+                aria-label="{company.fullName} ({company.symbol})"
                 class="point rounded-full transition-all duration-200
                   {hoveredCompany === company ? 'w-4 h-4 z-20' : 'w-2 h-2 z-10'}
                   {isSelected ? 'selected-company' : ''}"
@@ -518,13 +324,13 @@ onMount(() => {
                   background-color: {colorScale.get(company.industryName)};
                   width: {getBubbleSize(govScore)}px;
                   height: {getBubbleSize(govScore)}px;
-                  opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
+                  opacity: {appState.selectedCompany && !isSelected ? '0.6' : '1'};
                   --point-color: {colorScale.get(company.industryName)};
                   {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${colorScale.get(company.industryName)}` : ''};
                 "
-                on:mouseenter={() => hoveredCompany = company}
-                on:mouseleave={() => hoveredCompany = null}
-              />
+                onmouseenter={() => hoveredCompany = company}
+                onmouseleave={() => hoveredCompany = null}
+              ></button>
 
 
               <!-- Tooltip (hover only) -->
@@ -566,7 +372,7 @@ onMount(() => {
               <div class="absolute -left-14 text-xs text-gray-600 w-12 text-right">
                 {getTickLabel(tick)}
               </div>
-              <div class="w-full border-t border-gray-100" />
+              <div class="w-full border-t border-gray-100"></div>
             </div>
           {/each}
 
@@ -579,7 +385,7 @@ onMount(() => {
               <div class="absolute -bottom-6 text-xs text-gray-600 transform -translate-x-1/2">
                 {getTickLabel(tick)}
               </div>
-              <div class="h-full border-l border-gray-100" />
+              <div class="h-full border-l border-gray-100"></div>
             </div>
           {/each}
 
@@ -724,18 +530,4 @@ onMount(() => {
   isolation: isolate;
 }
 
-/* Add these styles to properly position the axis labels */
-.chart-area {
-  position: relative;
-  isolation: isolate;
-  margin: 1rem 0;
-}
-
-/* Ensure labels don't overlap with chart content */
-.axis-label {
-  position: absolute;
-  font-size: 0.875rem;
-  color: #4B5563;
-  white-space: nowrap;
-}
 </style>

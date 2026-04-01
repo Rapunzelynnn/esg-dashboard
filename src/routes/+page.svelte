@@ -1,7 +1,6 @@
 <!-- $lib/routes/+page.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { companies, priceDataStore } from '$lib/stores';
+  import { appState } from '$lib/state.svelte';
   import { loadAllData } from '$lib/data';
   import { Card } from '$lib/components/ui/card';
   import CompanySearch from '$lib/components/CompanySearch.svelte';
@@ -12,8 +11,8 @@
   import StockPriceCorrelation from '$lib/components/StockPriceCorrelation.svelte';
   import type { PriceData } from '$lib/types';
 
-  let loading = true;
-  let activeChart = 0;
+  let loading = $state(true);
+  let activeChart = $state(0);
 
   const charts = [
     { id: 0, title: 'Industrial Score Breakdown', icon: '📊' },
@@ -22,17 +21,14 @@
     { id: 3, title: 'ESG vs Stock Price', icon: '📉' }
   ];
 
-  // Convert Map to Record for StockPriceCorrelation prop compatibility
-  $: priceDataRecord = Object.fromEntries($priceDataStore) as Record<string, PriceData[]>;
+  let priceDataRecord = $derived(
+    Object.fromEntries(appState.priceData) as Record<string, PriceData[]>
+  );
 
-  onMount(async () => {
-    try {
-      await loadAllData();
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      loading = false;
-    }
+  $effect(() => {
+    loadAllData()
+      .catch((error) => console.error('Error loading data:', error))
+      .finally(() => { loading = false; });
   });
 </script>
 
@@ -58,7 +54,7 @@
         {#each charts as chart}
           <button
             class="nav-button {activeChart === chart.id ? 'active' : ''}"
-            on:click={() => activeChart = chart.id}
+            onclick={() => activeChart = chart.id}
           >
             <span>{chart.icon}</span>
             <span class="button-text">{chart.title}</span>
@@ -69,17 +65,17 @@
 
     {#if loading}
       <div class="centered-message">Loading data...</div>
-    {:else if $companies.length > 0}
+    {:else if appState.companies.length > 0}
       <Card class="content-card">
         {#if activeChart === 0}
-          <ESGIndustryAnalysis data={$companies} expanded={false} />
+          <ESGIndustryAnalysis data={appState.companies} expanded={false} />
         {:else if activeChart === 1}
-          <MarketCapCorrelation data={$companies} expanded={false} />
+          <MarketCapCorrelation data={appState.companies} expanded={false} />
         {:else if activeChart === 2}
-          <ScoreComparison data={$companies} expanded={false} />
+          <ScoreComparison data={appState.companies} expanded={false} />
         {:else if activeChart === 3}
-          <StockPriceCorrelation 
-            data={$companies} 
+          <StockPriceCorrelation
+            data={appState.companies}
             priceData={priceDataRecord}
             expanded={false} 
           />
@@ -156,13 +152,6 @@
   .nav-button.active {
     background: #3b82f6;
     color: white;
-  }
-
-  .content-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 600px; /* Ensure minimum height */
   }
 
   .centered-message {

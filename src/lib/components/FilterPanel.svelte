@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { FilterState } from '../types';
-  
-  export let localFilter: FilterState;
+
+  interface Props {
+    localFilter: FilterState;
+  }
+  let { localFilter }: Props = $props();
 </script>
 
 <div class="mb-4">
@@ -9,14 +12,14 @@
   <div class="grid grid-cols-2 gap-2">
     <input
       type="number"
-      bind:value={localFilter.minESGScore}
+      bind:value={localFilter.esgScoreRange[0]}
       class="w-full p-2 border rounded"
       aria-labelledby="esg-range-label"
       placeholder="Min"
     />
     <input
       type="number"
-      bind:value={localFilter.maxESGScore}
+      bind:value={localFilter.esgScoreRange[1]}
       class="w-full p-2 border rounded"
       aria-labelledby="esg-range-label"
       placeholder="Max"

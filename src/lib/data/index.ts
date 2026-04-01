@@ -1,4 +1,5 @@
-import { companies, priceDataStore } from '$lib/stores';
+// src/lib/data/index.ts
+import { appState } from '$lib/state.svelte';
 import { parseCSV } from './csvParser';
 import { parseAllPriceData } from './priceLoader';
 
@@ -13,6 +14,6 @@ export async function loadAllData(): Promise<void> {
 
 	const [esgText, priceText] = await Promise.all([esgRes.text(), priceRes.text()]);
 
-	companies.set(parseCSV(esgText));
-	priceDataStore.set(parseAllPriceData(priceText));
+	appState.companies = parseCSV(esgText);
+	appState.priceData = parseAllPriceData(priceText);
 }

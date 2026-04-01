@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-27
 **Branch strategy:** `main` (stable) → `dev` (integration) → feature branches → back to `dev` → `main`
-**Status:** Phase 1 complete, merged to `dev`
+**Status:** Phase 2 complete, pending merge to `dev`
 
 ---
 
@@ -26,7 +26,7 @@ Single-page SvelteKit app visualizing S&P 500 ESG data. Data is public and updat
 |-------|--------|-------|------------|--------|
 | 0 | — | Set up `dev` branch (done) | — | **Done** |
 | 1 | `refactor/data-layer` | Fix loading bugs, consolidate data module | — | **Done** |
-| 2 | `refactor/svelte5-migration` | Full Svelte 4 → 5 rewrite | Phase 1 | Pending |
+| 2 | `refactor/svelte5-migration` | Full Svelte 4 → 5 rewrite | Phase 1 | **Done** |
 | 3 | `refactor/d3-charts` | Replace Chart.js analysis charts with D3 | Phase 2 | Pending |
 | 4 | `chore/github-actions-data-update` | Python scraper + GitHub Actions workflow | Independent | Pending |
 
@@ -100,7 +100,7 @@ Merged to `dev` on 2026-03-27. All four stages implemented:
 - Update `svelte-check` and `@sveltejs/kit` to latest compatible versions
 
 ### Detailed plan
-→ Write at start of Phase 2 session using `writing-plans` skill
+→ See `docs/superpowers/plans/2026-03-30-svelte5-migration.md`
 
 ---
 

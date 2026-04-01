@@ -1,13 +1,16 @@
-<!-- $lib/routes/+layout.svelte -->
+<!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import '../app.css';
-  import { page } from '$app/stores';
   import DashboardLayout from '$lib/components/DashboardLayout.svelte';
+  import type { Snippet } from 'svelte';
+
+  interface Props { children: Snippet; }
+  let { children }: Props = $props();
 </script>
 
 <DashboardLayout>
   <main>
-    <slot />
+    {@render children()}
   </main>
 </DashboardLayout>
 

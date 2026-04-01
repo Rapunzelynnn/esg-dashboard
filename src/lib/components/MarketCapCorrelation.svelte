@@ -1,375 +1,168 @@
 <!-- $lib/components/MarketCapCorrelation.svelte -->
 <script lang="ts">
 import { fade } from 'svelte/transition';
-import type { 
-  Company, 
-  IndustryAccumulator,
-  ProcessedCompanyData 
-} from '$lib/types';
-import { selectedCompany as globalSelectedCompany } from '$lib/stores';
+import type { Company, IndustryAccumulator, ProcessedCompanyData } from '$lib/types';
+import { appState } from '$lib/state.svelte';
 
+interface Props {
+  data?: Company[];
+  expanded?: boolean;
+}
+let { data = [], expanded = false }: Props = $props();
 
-// Props
-export let data: Company[] = [];
-export let expanded = false;
+// State
+let selectedIndustries = $state(new Set<string>());
+let searchTerm = $state('');
+let selectedCompany = $state<ProcessedCompanyData | null>(null);
+let hoveredPoint = $state<ProcessedCompanyData | null>(null);
+let viewMode = $state<'absolute' | 'relative'>('relative');
+let showDropdown = $state(false);
 
-// State management
-let selectedIndustries = new Set<string>();
-let searchTerm = '';
-let selectedCompany: ProcessedCompanyData | null = null;
-let hoveredPoint: ProcessedCompanyData | null = null;
-let viewMode: 'absolute' | 'relative' = 'relative';
-let showAllIndustries = false;
-let showDropdown = false;
+// Industry categories and colors (identical to original — kept as const)
+const categoryOrder = ['Information Technology','Communication Services','Financials','Industrials','Consumer Discretionary','Consumer Staples','Health Care','Energy','Materials','Utilities'];
 
-// Process data for industry stats
-$: industryStats = data.reduce((acc: IndustryAccumulator, company) => {
-  if (!acc[company.industryName]) {
-    acc[company.industryName] = {
-      companies: [],
-      avgESG: 0,
-      avgMarketCap: 0,
-      stdDevESG: 0
-    };
-  }
-  acc[company.industryName].companies.push(company);
+const industryCategories = {
+  'Information Technology': { base: '#2563EB', industries: [{ name: 'Software', shade: '#2563EB' },{ name: 'IT Services', shade: '#1D4ED8' },{ name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },{ name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },{ name: 'Communications Equipment', shade: '#60A5FA' },{ name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }] },
+  'Communication Services': { base: '#EA580C', industries: [{ name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' },{ name: 'Media, Movies & Entertainment', shade: '#C2410C' },{ name: 'Telecommunication Services', shade: '#9A3412' }] },
+  'Financials': { base: '#059669', industries: [{ name: 'Banks', shade: '#059669' },{ name: 'Diversified Financial Services and Capital Markets', shade: '#047857' },{ name: 'Insurance', shade: '#065F46' },{ name: 'Real Estate Management & Development', shade: '#10B981' },{ name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }] },
+  'Industrials': { base: '#DC2626', industries: [{ name: 'Aerospace & Defense', shade: '#DC2626' },{ name: 'Airlines', shade: '#B91C1C' },{ name: 'Building Products', shade: '#991B1B' },{ name: 'Machinery and Electrical Equipment', shade: '#EF4444' },{ name: 'Electrical Components & Equipment', shade: '#F87171' },{ name: 'Trading Companies & Distributors', shade: '#DC2626' },{ name: 'Professional Services', shade: '#B91C1C' },{ name: 'Commercial Services & Supplies', shade: '#991B1B' },{ name: 'Construction & Engineering', shade: '#EF4444' },{ name: 'Transportation and Transportation Infrastructure', shade: '#F87171' },{ name: 'Auto Components', shade: '#DC2626' }] },
+  'Consumer Discretionary': { base: '#D97706', industries: [{ name: 'Automobiles', shade: '#D97706' },{ name: 'Retailing', shade: '#B45309' },{ name: 'Restaurants & Leisure Facilities', shade: '#92400E' },{ name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },{ name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' },{ name: 'Homebuilding', shade: '#D97706' },{ name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },{ name: 'Casinos & Gaming', shade: '#92400E' },{ name: 'Household Durables', shade: '#F59E0B' }] },
+  'Consumer Staples': { base: '#DB2777', industries: [{ name: 'Food Products', shade: '#DB2777' },{ name: 'Food & Staples Retailing', shade: '#BE185D' },{ name: 'Household Products', shade: '#9D174D' },{ name: 'Personal Products', shade: '#EC4899' },{ name: 'Beverages', shade: '#F472B6' },{ name: 'Tobacco', shade: '#DB2777' }] },
+  'Health Care': { base: '#0284C7', industries: [{ name: 'Biotechnology', shade: '#0284C7' },{ name: 'Pharmaceuticals', shade: '#0369A1' },{ name: 'Health Care Equipment & Supplies', shade: '#075985' },{ name: 'Health Care Providers & Services', shade: '#0EA5E9' },{ name: 'Life Sciences Tools & Services', shade: '#38BDF8' }] },
+  'Energy': { base: '#0D9488', industries: [{ name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },{ name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' },{ name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },{ name: 'Energy Equipment & Services', shade: '#14B8A6' }] },
+  'Materials': { base: '#65A30D', industries: [{ name: 'Chemicals', shade: '#65A30D' },{ name: 'Construction Materials', shade: '#4D7C0F' },{ name: 'Metals & Mining', shade: '#3F6212' },{ name: 'Containers & Packaging', shade: '#84CC16' },{ name: 'Steel', shade: '#A3E635' }] },
+  'Utilities': { base: '#CA8A04', industries: [{ name: 'Electric Utilities', shade: '#CA8A04' },{ name: 'Gas Utilities', shade: '#A16207' },{ name: 'Multi and Water Utilities', shade: '#854D0E' }] }
+};
 
-  // Calculate statistics immediately for this industry
-  const stats = acc[company.industryName];
-  const validCompanies = stats.companies.filter(c => 
-    c.esgScores?.total > 0 && !isNaN(c.esgScores.total)
-  );
+// Derived
+let industryStats = $derived(
+  data.reduce((acc: IndustryAccumulator, company) => {
+    if (!acc[company.industryName]) {
+      acc[company.industryName] = { companies: [], avgESG: 0, avgMarketCap: 0, stdDevESG: 0 };
+    }
+    acc[company.industryName].companies.push(company);
+    const stats = acc[company.industryName];
+    const validCompanies = stats.companies.filter(c => c.esgScores?.total > 0 && !isNaN(c.esgScores.total));
+    if (validCompanies.length > 0) {
+      stats.avgESG = validCompanies.reduce((sum, c) => sum + c.esgScores.total, 0) / validCompanies.length;
+      const squaredDiffs = validCompanies.map(c => Math.pow(c.esgScores.total - stats.avgESG, 2));
+      stats.stdDevESG = Math.sqrt(squaredDiffs.reduce((sum, diff) => sum + diff, 0) / validCompanies.length);
+      stats.avgMarketCap = validCompanies.reduce((sum, c) => sum + c.marketCap, 0) / validCompanies.length;
+    }
+    return acc;
+  }, {} as IndustryAccumulator)
+);
 
-  if (validCompanies.length > 0) {
-    // Calculate average
-    stats.avgESG = validCompanies.reduce((sum, c) => 
-      sum + c.esgScores.total, 0) / validCompanies.length;
-
-    // Calculate standard deviation
-    const squaredDiffs = validCompanies.map(c => 
-      Math.pow(c.esgScores.total - stats.avgESG, 2)
-    );
-    stats.stdDevESG = Math.sqrt(
-      squaredDiffs.reduce((sum, diff) => sum + diff, 0) / validCompanies.length
-    );
-
-    // Calculate market cap average
-    stats.avgMarketCap = validCompanies.reduce((sum, c) => 
-      sum + c.marketCap, 0) / validCompanies.length;
-  }
-
-  return acc;
-}, {} as IndustryAccumulator);
-
-
-$: marketCapData = data
-  .map(company => {
+let marketCapData = $derived(
+  data.map(company => {
     const stats = industryStats[company.industryName];
-    // Add null checks and fallbacks
     const avgESG = stats?.avgESG || 0;
-    const stdDevESG = stats?.stdDevESG || 1; // Use 1 as default to avoid division by zero
-    
-    const relativeESG = stdDevESG !== 0 
-      ? (company.esgScores.total - avgESG) / stdDevESG 
-      : 0;
-    
-    return {
-      ...company,
-      relativeESG,
-      isOutlier: Math.abs(relativeESG) > 2,
-      industryAvg: avgESG,
-      industryStdDev: stdDevESG
-    };
+    const stdDevESG = stats?.stdDevESG || 1;
+    const relativeESG = stdDevESG !== 0 ? (company.esgScores.total - avgESG) / stdDevESG : 0;
+    return { ...company, relativeESG, isOutlier: Math.abs(relativeESG) > 2, industryAvg: avgESG, industryStdDev: stdDevESG };
+  }).filter(d => d.marketCap > 0 && d.esgScores.total > 0)
+);
+
+let filteredData = $derived(
+  marketCapData.filter(company => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = searchTerm === '' ||
+      company.symbol.toLowerCase().includes(searchLower) ||
+      company.fullName.toLowerCase().includes(searchLower) ||
+      company.industryName.toLowerCase().includes(searchLower);
+    const matchesIndustry = selectedIndustries.size === 0 || selectedIndustries.has(company.industryName);
+    return matchesSearch && matchesIndustry;
   })
-  .filter(d => d.marketCap > 0 && d.esgScores.total > 0);
+);
 
-// Filtering logic
-$: filteredData = marketCapData.filter(company => {
-  const searchLower = searchTerm.toLowerCase();
-  const matchesSearch = searchTerm === '' || 
-    company.symbol.toLowerCase().includes(searchLower) ||
-    company.fullName.toLowerCase().includes(searchLower) ||
-    company.industryName.toLowerCase().includes(searchLower);
-  
-  // Modified industry filtering logic
-  const matchesIndustry = selectedIndustries.size === 0 || selectedIndustries.has(company.industryName);
+let height = $derived(expanded ? 600 : 400);
+let maxMarketCap = $derived(Math.max(...filteredData.map(d => d.marketCap)));
+let maxScore = $derived(viewMode === 'absolute' ? 100 : 4);
+let minScore = $derived(viewMode === 'absolute' ? 0 : -4);
 
-  return matchesSearch && matchesIndustry;
+let industries = $derived(
+  [...new Set(marketCapData.map(d => d.industryName))].sort((a, b) => {
+    const getCatForIndustry = (n: string) =>
+      Object.entries(industryCategories).find(([_, cat]) => cat.industries.some(i => i.name === n))?.[0] ?? 'Uncategorized';
+    const catA = getCatForIndustry(a);
+    const catB = getCatForIndustry(b);
+    if (catA !== catB) return categoryOrder.indexOf(catA) - categoryOrder.indexOf(catB);
+    if (catA !== 'Uncategorized') {
+      const cat = industryCategories[catA as keyof typeof industryCategories];
+      if (cat) return cat.industries.findIndex(i => i.name === a) - cat.industries.findIndex(i => i.name === b);
+    }
+    return a.localeCompare(b);
+  })
+);
+
+let colorScale = $derived(new Map(industries.map(industry => [industry, getIndustryColor(industry)])));
+
+let relevantIndustries = $derived(new Set<string>((() => {
+  if (!appState.selectedCompany) return [];
+  const selectedCategory = Object.entries(industryCategories)
+    .find(([_, cat]) => cat.industries.some(i => i.name === appState.selectedCompany!.industryName))?.[0];
+  if (!selectedCategory) return [appState.selectedCompany.industryName];
+  return industryCategories[selectedCategory as keyof typeof industryCategories].industries.map(i => i.name);
+})()));
+
+let xAxisTicks = $derived((() => {
+  const maxValue = maxMarketCap / 1_000_000_000;
+  if (maxValue <= 0) return [];
+  let interval = maxValue > 1000 ? 200 : maxValue > 500 ? 100 : maxValue > 200 ? 50 : 20;
+  const ticks = [];
+  for (let i = 0; i <= maxValue; i += interval) ticks.push(i);
+  return ticks;
+})());
+
+// Sync selected industries with global company
+$effect(() => {
+  if (appState.selectedCompany && industries.length > 0) {
+    selectedIndustries = new Set([...relevantIndustries]);
+  }
 });
 
-// Dimensions and scales
-$: height = expanded ? 600 : 400;
-$: maxMarketCap = Math.max(...filteredData.map(d => d.marketCap));
-$: maxScore = viewMode === 'absolute' ? 100 : 4; // 4 standard deviations for relative view
-$: minScore = viewMode === 'absolute' ? 0 : -4;
-
-// Helper functions
+// Functions
 function toggleIndustry(industry: string) {
   selectedIndustries = new Set(selectedIndustries);
   if (selectedIndustries.has(industry)) {
-    // Don't allow deselecting the current company's industry
-    if (industry === $globalSelectedCompany?.industryName) return;
+    if (industry === appState.selectedCompany?.industryName) return;
     selectedIndustries.delete(industry);
   } else {
     selectedIndustries.add(industry);
   }
 }
-function selectAll() {
-  selectedIndustries = new Set(industries);
-}
+
+function selectAll() { selectedIndustries = new Set(industries); }
+
 function clearAll() {
-  if ($globalSelectedCompany) {
-    // If a company is selected, keep its industry selected
-    selectedIndustries = new Set([$globalSelectedCompany.industryName]);
+  if (appState.selectedCompany) {
+    selectedIndustries = new Set([appState.selectedCompany.industryName]);
   } else {
     selectedIndustries = new Set();
   }
 }
 
 function formatMarketCap(value: number): string {
-    if (!value || isNaN(value)) return '$0.00';
-    if (value >= 1_000_000_000_000) {
-        return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
-    } else if (value >= 1_000_000_000) {
-        return `$${(value / 1_000_000_000).toFixed(2)} billion`;
-    } else if (value >= 1_000_000) {
-        return `$${(value / 1_000_000_000).toFixed(2)} million`;
-    }
-    return `$${value.toFixed(2)}`;
+  if (!value || isNaN(value)) return '$0.00';
+  if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(2)} trillion`;
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)} billion`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)} million`;
+  return `$${value.toFixed(2)}`;
 }
 
-function handleChartClick() {
-  selectedCompany = null;
-}
+function handleChartClick() { selectedCompany = null; }
 
-
-// Update your existing colorScale
-$: colorScale = new Map(industries.map(industry => [
-  industry,
-  getIndustryColor(industry)
-]));
-
-// Handle point click without store
 function handlePointClick(company: ProcessedCompanyData, event: Event) {
   event.stopPropagation();
   selectedCompany = selectedCompany === company ? null : company;
 }
 
-const categoryOrder = [
-  'Information Technology',
-  'Communication Services',
-  'Financials',
-  'Industrials',
-  'Consumer Discretionary',
-  'Consumer Staples',
-  'Health Care',
-  'Energy',
-  'Materials',
-  'Utilities'
-];
-
-// Industry category mapping with color schemes
-const industryCategories = {
-  'Information Technology': {
-    base: '#2563EB', // blue base
-    industries: [
-      { name: 'Software', shade: '#2563EB' },         // blue-600
-      { name: 'IT Services', shade: '#1D4ED8' },      // blue-700
-      { name: 'Computers & Peripherals and Office Electronics', shade: '#1E40AF' },  // blue-800
-      { name: 'Semiconductors & Semiconductor Equipment', shade: '#3B82F6' },       // blue-500
-      { name: 'Communications Equipment', shade: '#60A5FA' },      // blue-400
-      { name: 'Electronic Equipment, Instruments & Components', shade: '#2563EB' }   // blue-600
-    ]
-  },
-  'Communication Services': {
-    base: '#EA580C', // orange base
-    industries: [
-      { name: 'Interactive Media, Services & Home Entertainment', shade: '#EA580C' }, // orange-600
-      { name: 'Media, Movies & Entertainment', shade: '#C2410C' },                    // orange-700
-      { name: 'Telecommunication Services', shade: '#9A3412' }                        // orange-800
-    ]
-  },
-  'Financials': {
-    base: '#059669', // emerald base
-    industries: [
-      { name: 'Banks', shade: '#059669' },                // emerald-600
-      { name: 'Diversified Financial Services and Capital Markets', shade: '#047857' }, // emerald-700
-      { name: 'Insurance', shade: '#065F46' },            // emerald-800
-      { name: 'Real Estate Management & Development', shade: '#10B981' },  // emerald-500
-      { name: 'Equity Real Estate Investment Trusts (REITs)', shade: '#34D399' }  // emerald-400
-    ]
-  },
-  'Industrials': {
-    base: '#DC2626', // red base
-    industries: [
-      { name: 'Aerospace & Defense', shade: '#DC2626' },        // red-600
-      { name: 'Airlines', shade: '#B91C1C' },                   // red-700
-      { name: 'Building Products', shade: '#991B1B' },          // red-800
-      { name: 'Machinery and Electrical Equipment', shade: '#EF4444' },    // red-500
-      { name: 'Electrical Components & Equipment', shade: '#F87171' },     // red-400
-      { name: 'Trading Companies & Distributors', shade: '#DC2626' },      // red-600
-      { name: 'Professional Services', shade: '#B91C1C' },                 // red-700
-      { name: 'Commercial Services & Supplies', shade: '#991B1B' },        // red-800
-      { name: 'Construction & Engineering', shade: '#EF4444' },            // red-500
-      { name: 'Transportation and Transportation Infrastructure', shade: '#F87171' }, // red-400
-      { name: 'Auto Components', shade: '#DC2626' }                        // red-600
-    ]
-  },
-  'Consumer Discretionary': {
-    base: '#D97706', // amber base
-    industries: [
-      { name: 'Automobiles', shade: '#D97706' },        // amber-600
-      { name: 'Retailing', shade: '#B45309' },          // amber-700
-      { name: 'Restaurants & Leisure Facilities', shade: '#92400E' },  // amber-800
-      { name: 'Hotels, Resorts & Cruise Lines', shade: '#F59E0B' },    // amber-500
-      { name: 'Leisure Equipment & Products and Consumer Electronics', shade: '#FBBF24' }, // amber-400
-      { name: 'Homebuilding', shade: '#D97706' },        // amber-600
-      { name: 'Textiles, Apparel & Luxury Goods', shade: '#B45309' },  // amber-700
-      { name: 'Casinos & Gaming', shade: '#92400E' },    // amber-800
-      { name: 'Household Durables', shade: '#F59E0B' }   // amber-500
-    ]
-  },
-  'Consumer Staples': {
-    base: '#DB2777', // pink base
-    industries: [
-      { name: 'Food Products', shade: '#DB2777' },          // pink-600
-      { name: 'Food & Staples Retailing', shade: '#BE185D' }, // pink-700
-      { name: 'Household Products', shade: '#9D174D' },     // pink-800
-      { name: 'Personal Products', shade: '#EC4899' },      // pink-500
-      { name: 'Beverages', shade: '#F472B6' },             // pink-400
-      { name: 'Tobacco', shade: '#DB2777' }                // pink-600
-    ]
-  },
-  'Health Care': {
-    base: '#0284C7', // sky blue base
-    industries: [
-      { name: 'Biotechnology', shade: '#0284C7' },        // sky-600
-      { name: 'Pharmaceuticals', shade: '#0369A1' },      // sky-700
-      { name: 'Health Care Equipment & Supplies', shade: '#075985' },  // sky-800
-      { name: 'Health Care Providers & Services', shade: '#0EA5E9' },  // sky-500
-      { name: 'Life Sciences Tools & Services', shade: '#38BDF8' }     // sky-400
-    ]
-  },
-  'Energy': {
-    base: '#0D9488', // teal base
-    industries: [
-      { name: 'Oil & Gas Upstream & Integrated', shade: '#0D9488' },  // teal-600
-      { name: 'Oil & Gas Storage & Transportation', shade: '#0F766E' }, // teal-700
-      { name: 'Oil & Gas Refining & Marketing', shade: '#115E59' },   // teal-800
-      { name: 'Energy Equipment & Services', shade: '#14B8A6' }       // teal-500
-    ]
-  },
-  'Materials': {
-    base: '#65A30D', // lime base
-    industries: [
-      { name: 'Chemicals', shade: '#65A30D' },           // lime-600
-      { name: 'Construction Materials', shade: '#4D7C0F' }, // lime-700
-      { name: 'Metals & Mining', shade: '#3F6212' },     // lime-800
-      { name: 'Containers & Packaging', shade: '#84CC16' }, // lime-500
-      { name: 'Steel', shade: '#A3E635' }               // lime-400
-    ]
-  },
-  'Utilities': {
-    base: '#CA8A04', // yellow base
-    industries: [
-      { name: 'Electric Utilities', shade: '#CA8A04' },         // yellow-600
-      { name: 'Gas Utilities', shade: '#A16207' },              // yellow-700
-      { name: 'Multi and Water Utilities', shade: '#854D0E' }   // yellow-800
-    ]
-  }
-};
-
-// Update the industries sorting with proper typing
-$: industries = [...new Set(marketCapData.map(d => d.industryName))]
-  .sort((a, b) => {
-    // Find category for each industry
-    const getCategoryForIndustry = (industryName: string): string => {
-      return Object.entries(industryCategories).find(([_, category]) => 
-        category.industries.some(i => i.name === industryName)
-      )?.[0] ?? 'Uncategorized';
-    };
-
-    const categoryA = getCategoryForIndustry(a);
-    const categoryB = getCategoryForIndustry(b);
-
-    // If industries are in different categories, sort by category order
-    if (categoryA !== categoryB) {
-      return categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB);
-    }
-
-    // If industries are in the same category and the category exists
-    if (categoryA !== 'Uncategorized') {
-      // Safely access the category
-      const category = industryCategories[categoryA as keyof typeof industryCategories];
-      if (category) {
-        const indexA = category.industries.findIndex(i => i.name === a);
-        const indexB = category.industries.findIndex(i => i.name === b);
-        return indexA - indexB;
-      }
-    }
-
-    // Fallback to alphabetical sorting for uncategorized industries
-    return a.localeCompare(b);
-  });
-
-// Update the getIndustryColor function with proper typing
 function getIndustryColor(industryName: string): string {
-  for (const [_, category] of Object.entries(industryCategories)) {
-    const industry = category.industries.find(i => i.name === industryName);
-    if (industry) {
-      return industry.shade;
-    }
+  for (const [_, cat] of Object.entries(industryCategories)) {
+    const industry = cat.industries.find(i => i.name === industryName);
+    if (industry) return industry.shade;
   }
-  return '#94A3B8'; // default slate-400 for any uncategorized industries
-}
-
-$: relevantIndustries = new Set<string>((() => {
-  if (!$globalSelectedCompany) return [];
-  
-  // Find the category of the selected company
-  const selectedCategory = Object.entries(industryCategories).find(([_, category]) => 
-    category.industries.some(i => i.name === $globalSelectedCompany.industryName)
-  )?.[0];
-
-  if (!selectedCategory) return [$globalSelectedCompany.industryName];
-
-  // Get all industries in the same category
-  return industryCategories[selectedCategory as keyof typeof industryCategories]
-    .industries.map(i => i.name);
-})());
-
-// Update selected industries when global company changes
-$: if ($globalSelectedCompany && industries.length > 0) {
-  selectedIndustries = new Set([...relevantIndustries]);
-}
-
-//handle initial industry selection
-function initializeSelectedIndustries(company: Company | null) {
-  if (!company) {
-    selectedIndustries = new Set(industries); // Show all by default if no company selected
-    return;
-  }
-
-  // Find the category of the selected company
-  const selectedCategory = Object.entries(industryCategories).find(([_, category]) => 
-    category.industries.some(i => i.name === company.industryName)
-  )?.[0];
-
-  if (!selectedCategory) {
-    selectedIndustries = new Set([company.industryName]);
-    return;
-  }
-
-  // Get all industries in the same category
-  const categoryIndustries = industryCategories[selectedCategory as keyof typeof industryCategories]
-    .industries.map(i => i.name);
-  
-  selectedIndustries = new Set(categoryIndustries);
-}
-
-// Update the reactive statement for selected company changes
-$: if ($globalSelectedCompany) {
-  initializeSelectedIndustries($globalSelectedCompany);
+  return '#94A3B8';
 }
 
 function handleDropdownClick(event: MouseEvent) {
@@ -377,42 +170,12 @@ function handleDropdownClick(event: MouseEvent) {
   showDropdown = !showDropdown;
 }
 
-// Add new function to format x-axis labels
 function formatXAxisLabel(value: number): string {
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(0)}T`;
-  } else {
-    return `${value}B`;
-  }
+  return value >= 1000 ? `${(value / 1000).toFixed(0)}T` : `${value}B`;
 }
-
-// Add x-axis tick values calculation
-$: xAxisTicks = (() => {
-  const maxValue = maxMarketCap / 1_000_000_000; // Convert to billions
-  if (maxValue <= 0) return [];
-  
-  // Calculate appropriate tick intervals based on max value
-  let interval: number;
-  if (maxValue > 1000) {
-    interval = 200; // For trillion+ companies
-  } else if (maxValue > 500) {
-    interval = 100;
-  } else if (maxValue > 200) {
-    interval = 50;
-  } else {
-    interval = 20;
-  }
-  
-  const ticks = [];
-  for (let i = 0; i <= maxValue; i += interval) {
-    ticks.push(i);
-  }
-  return ticks;
-})();
-
 </script>
 
-<svelte:window on:click={() => showDropdown = false} />
+<svelte:window onclick={() => showDropdown = false} />
 
 
 <div class="w-full space-y-4">
@@ -425,13 +188,13 @@ $: xAxisTicks = (() => {
       <div class="flex space-x-2">
         <button
           class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'absolute' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
-          on:click={() => viewMode = 'absolute'}
+          onclick={() => viewMode = 'absolute'}
         >
           Absolute Scores
         </button>
         <button
           class="px-3 py-1 rounded-lg transition-all duration-200 {viewMode === 'relative' ? 'bg-blue-500 text-white' : 'bg-gray-100'}"
-          on:click={() => viewMode = 'relative'}
+          onclick={() => viewMode = 'relative'}
         >
           Industry-Relative
         </button>
@@ -455,13 +218,13 @@ $: xAxisTicks = (() => {
     <div class="flex flex-wrap gap-2 items-center">
       <button 
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={selectAll}
+        onclick={selectAll}
       >
         Select All
       </button>
-      <button 
+      <button
         class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300"
-        on:click={clearAll}
+        onclick={clearAll}
       >
         Clear All
       </button>
@@ -470,16 +233,19 @@ $: xAxisTicks = (() => {
       <div class="relative">
         <button
           class="px-3 py-1 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center gap-2"
-          on:click|stopPropagation={handleDropdownClick}
+          onclick={handleDropdownClick}
         >
           <span>More Industries</span>
           <span class="text-xs">▼</span>
         </button>
 
         {#if showDropdown}
-          <div 
+          <div
             class="absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto bg-white border rounded-lg shadow-lg z-50"
-            on:click|stopPropagation={() => {}}
+            role="menu"
+            tabindex="-1"
+            onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
           >
             <div class="p-4 space-y-4">
               <!-- Search input -->
@@ -506,7 +272,7 @@ $: xAxisTicks = (() => {
                         {#if industry.toLowerCase().includes(searchTerm.toLowerCase())}
                           <button
                             class="w-full px-2 py-1 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                            on:click={() => toggleIndustry(industry)}
+                            onclick={() => toggleIndustry(industry)}
                           >
                             <div class="flex items-center flex-1">
                               <div
@@ -537,7 +303,7 @@ $: xAxisTicks = (() => {
       <button
         class="px-3 py-1 text-sm rounded-full transition-all duration-200
           bg-gray-800 text-white"
-        on:click={() => toggleIndustry(industry)}
+        onclick={() => toggleIndustry(industry)}
       >
         <div class="flex items-center space-x-2">
           <div
@@ -554,17 +320,18 @@ $: xAxisTicks = (() => {
 
 
   <!-- Chart container -->
-  <section 
-    class="relative chart-area ml-12" 
+  <section
+    class="relative chart-area ml-12"
     style="height: {height}px;"
-    role="region"
     aria-label="ESG Score vs Market Cap Chart"
   >
-    <button
+    <div
       class="absolute inset-0 w-full h-full transparent-button"
-      on:click={handleChartClick}
-      on:keydown={(e) => {
-        if (e.key === 'Escape') selectedCompany = null;
+      role="button"
+      tabindex="0"
+      onclick={handleChartClick}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') handleChartClick();
       }}
       aria-label="Clear selection"
     >
@@ -582,7 +349,6 @@ $: xAxisTicks = (() => {
                 <span
                   class="absolute right-0 text-sm text-gray-600 pr-2"
                   style="bottom: {(value / maxScore) * 100}%"
-                  role="text"
                 >
                   {value}
                 </span>
@@ -592,7 +358,6 @@ $: xAxisTicks = (() => {
                 <span
                   class="absolute right-0 text-sm text-gray-600 pr-2"
                   style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
-                  role="text"
                 >
                   {value}σ
                 </span>
@@ -605,7 +370,6 @@ $: xAxisTicks = (() => {
         <div 
           class="absolute text-sm text-gray-600"
           style="left: -3rem; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: left top;"
-          role="text"
         >
           {viewMode === 'absolute' ? 'ESG Score' : 'ESG Score (Standard Deviations from Industry Mean)'}
         </div>
@@ -632,7 +396,6 @@ $: xAxisTicks = (() => {
         <!-- X-axis label with adjusted bottom position -->
         <div
           class="absolute bottom-[-24px] left-16 right-0 text-center text-sm text-gray-600"
-          role="text"
         >
           Market Cap (Billions USD)
         </div>
@@ -645,14 +408,14 @@ $: xAxisTicks = (() => {
             <div
               class="absolute w-full border-t border-gray-200"
               style="bottom: {(value / maxScore) * 100}%"
-            />
+            ></div>
           {/each}
         {:else}
           {#each [-2, 0, 2] as value}
             <div
               class="absolute w-full border-t {value === 0 ? 'border-gray-400' : 'border-gray-200'}"
               style="bottom: {((value - minScore) / (maxScore - minScore)) * 100}%"
-            />
+            ></div>
           {/each}
         {/if}
       </div>
@@ -661,7 +424,7 @@ $: xAxisTicks = (() => {
       <div class="absolute left-16 right-8 top-8 bottom-8" role="group" aria-label="Company data points" style="z-index: 1;">
         {#each filteredData as company}
           {@const yValue = viewMode === 'absolute' ? company.esgScores.total : company.relativeESG}
-          {@const isSelected = company.symbol === $globalSelectedCompany?.symbol}
+          {@const isSelected = company.symbol === appState.selectedCompany?.symbol}
           
           <div class="absolute" style="
             left: {(company.marketCap / maxMarketCap) * 100}%;
@@ -672,20 +435,21 @@ $: xAxisTicks = (() => {
             <!-- Point button -->
             <button
               type="button"
+              aria-label="{company.fullName} ({company.symbol})"
               class="point rounded-full transition-all duration-200
                 {hoveredPoint === company || selectedCompany === company ? 'w-5 h-5 z-20' : 'w-2.5 h-2.5 z-10'}
                 {company.isOutlier ? 'ring-2 ring-red-500' : ''}
                 {isSelected ? 'selected-company' : ''}"
               style="
                 background-color: {colorScale.get(company.industryName)};
-                opacity: {$globalSelectedCompany && !isSelected ? '0.6' : '1'};
+                opacity: {appState.selectedCompany && !isSelected ? '0.6' : '1'};
                 --point-color: {colorScale.get(company.industryName)};
                 {isSelected ? `box-shadow: 0 0 0 2px white, 0 0 0 4px ${colorScale.get(company.industryName)}` : ''};
               "
-              on:mouseenter={() => hoveredPoint = company}
-              on:mouseleave={() => hoveredPoint = null}
-              on:click|stopPropagation={(e) => handlePointClick(company, e)}
-            />
+              onmouseenter={() => hoveredPoint = company}
+              onmouseleave={() => hoveredPoint = null}
+              onclick={(e) => handlePointClick(company, e)}
+            ></button>
             <!-- Tooltip -->
             {#if hoveredPoint === company || selectedCompany === company}
               <div
@@ -730,7 +494,7 @@ $: xAxisTicks = (() => {
         {/each}
       </div>
     </div>
-  </button>
+  </div>
 </section>
 
   <!-- Statistics Panel -->
