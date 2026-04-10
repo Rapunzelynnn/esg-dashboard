@@ -60,3 +60,59 @@ To start a refactoring phase:
 - Chart.js 4 via `svelte-chartjs` wrapper (line charts use time scale with `chartjs-adapter-date-fns`)
 - shadcn-style `Card` component in `src/lib/components/ui/card/`
 - `lucide-svelte` for icons
+
+## Browser Verification
+
+Use the Claude-in-Chrome extension (`mcp__claude-in-chrome__*` tools) for all UI verification.
+
+### Rules
+
+- **Always use Chrome** via the Claude-in-Chrome extension
+- Never use other browsers (Safari, Firefox, Dia, Arc, etc.) for UI verification
+- Dia also has the Claude extension installed — **never call `switch_browser`**, it broadcasts to all browsers including Dia and is disruptive
+- Dev server default port is 5174, but may differ if that port is occupied
+
+### Project-Specific: Scale Transform
+
+`DashboardLayout.svelte` wraps the page with a `scale(0.5)` CSS transform. Screenshots show everything at **half the coded size** — a component written at `width: 1200px` appears as 600px in the browser. When evaluating screenshots, account for this: do not flag correctly-sized elements as "too small."
+
+### Dedicated Window Concept
+
+All Claude-navigated pages stay in a single dedicated Chrome window — separate from the user's other Chrome windows. Claude creates and reuses this window automatically; the user never opens it manually. The dedicated window is identified by matching `http://localhost:<port>` in the connected Chrome session.
+
+### Connecting Chrome
+
+Connection is established via a native messaging host — no manual "Connect" popup. The extension (Claude in Chrome Beta) auto-connects on every session once the host is configured.
+
+**One-time setup:** The user runs `/chrome` in the Claude Code CLI to install the native messaging host, then restarts Chrome.
+
+**If disconnected:** Prompt the user **once**: _"The Chrome extension isn't connecting. Please run `/chrome` in Claude Code CLI, then let me know when done."_ Retry `tabs_context_mcp` once after they confirm. If still failing, note the issue and stop.
+
+If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the user to run `/chrome` → "Reconnect extension".
+
+### Workflow Decision Tree
+
+**Step 1 — Ensure the dev server is running:**
+```bash
+lsof -i :5173 -i :5174 -i :5175 | grep LISTEN
+```
+- Port is listening → note it as `<port>`
+- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds
+
+**Step 2 — Verify extension connection** via `tabs_context_mcp`:
+- Returns tab data → proceed to Step 3
+- Returns "Browser extension is not connected" → prompt user once as above
+
+**Step 3 — Find the dedicated window** via `tabs_context_mcp`:
+- Look for any tab whose URL is `http://localhost:<port>` (this app has one route: `/`)
+- Multiple matches → prefer the window with the fewest total tabs
+- Match found → reuse that tab; do not open new windows or tabs
+- No match → go to Step 4
+
+**Step 4 — Create the dedicated window** (only when Step 3 finds nothing):
+Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google Chrome"` or any bash command.
+
+**Step 5 — Stay in the dedicated window:**
+- All navigation: use `navigate` on the identified tab ID
+- Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
+- Re-screenshot after fixes before declaring complete
