@@ -135,7 +135,7 @@ src/lib/charts/
 - Tooltip on hover: company name + metric values
 
 ### Detailed plan
-→ Write at start of Phase 3 session using `writing-plans` skill
+→ See `docs/superpowers/plans/2026-04-10-d3-charts.md`
 
 ---
 
