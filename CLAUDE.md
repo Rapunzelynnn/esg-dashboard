@@ -97,7 +97,7 @@ If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the
 lsof -i :5173 -i :5174 -i :5175 | grep LISTEN
 ```
 - Port is listening → note it as `<port>`
-- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds
+- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds. If no port appears after 15s, stop and prompt the user: "The dev server didn't start — please check for errors and let me know when it's running."
 
 **Step 2 — Verify extension connection** via `tabs_context_mcp`:
 - Returns tab data → proceed to Step 3
@@ -114,5 +114,11 @@ Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google
 
 **Step 5 — Stay in the dedicated window:**
 - All navigation: use `navigate` on the identified tab ID
+- If the server dies mid-session (connection error in screenshot or console), re-run Step 1 to restart it before retrying
+- Before screenshotting: wait 2s for Vite HMR, then call `read_console_messages` with pattern `(?i)(error|\[vite\])`:
+  - `[vite] hmr update` seen → HMR succeeded; proceed to screenshot
+  - `[vite] full reload` seen → Vite is already reloading; wait an additional 2s, then screenshot
+  - No `[vite]` messages → HMR may not have fired; call `navigate` on the tab to force a reload, then wait 2s
+  - JS errors present → note them; likely the root cause of any visual issue
 - Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
-- Re-screenshot after fixes before declaring complete
+- If screenshot shows a problem, fix and re-screenshot (max 3 total attempts before escalating to the user)
