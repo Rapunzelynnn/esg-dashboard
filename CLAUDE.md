@@ -90,30 +90,32 @@ Connection is established via a native messaging host — no manual "Connect" po
 
 ### Workflow — Run Before Any UI Verification
 
-**Step 1 — Ensure the dev server is running and find the port:**
+**Step 1 — Discover open tabs first:**
 
-First, call `tabs_context_mcp({ createIfEmpty: true })` (Step 2 below) and check if any tab in the MCP group already has a `http://localhost:*` URL — extract `<port>` from it directly. If found, skip the rest of Step 1.
+Call `tabs_context_mcp({ createIfEmpty: true })`.
+- Returns "Browser extension is not connected" → prompt user once as above; retry once after confirmation
+- Returns "Multiple Chrome extensions connected" → prompt user to reconnect as above; retry once
 
-Otherwise, scan for a running Node server:
+Scan `availableTabs` for any tab whose URL contains `localhost` (match on hostname — not a prefix match — so trailing slashes, paths like `/dashboard`, and query strings are all handled correctly). If found:
+- Extract `<port>` from that URL
+- Record its `tabId`
+- **Stop here — skip Steps 2 and 3 entirely**
+
+**Step 2 — Find the port (only if Step 1 found no localhost tab):**
+
+Scan for a running Node server:
 ```bash
 lsof -i :5173-5185 | grep LISTEN | grep node
 ```
 - Port found → note as `<port>`
 - Nothing listening → run `npm run dev` in background; watch its stdout for the line `Local: http://localhost:<port>` to get the exact port; also retry `lsof` every 2s (up to 15s) as a fallback until a port responds
 
-**Step 2 — Get the Claude window:**
+**Step 3 — Open the tab (only if Step 1 found nothing):**
 
-Call `tabs_context_mcp({ createIfEmpty: true })`.
-- Returns tab list → proceed (the MCP group is Claude's dedicated window; a new window is only created when no group exists yet — subsequent calls never open a second window)
-- Returns "Browser extension is not connected" → prompt user once as above; retry once after confirmation
-- Returns "Multiple Chrome extensions connected" → prompt user to reconnect as above; retry once
-
-**Step 3 — Find or open the localhost tab (within MCP group only):**
-
-Scan `availableTabs` returned in Step 2 for a tab whose `url` starts with `http://localhost:<port>`.
-- Found → record its `tabId` — **stop here, do not open another tab or window**
-- Not found → call `navigate` on an existing MCP tab with `url=http://localhost:<port>`; if the group has no tabs, call `tabs_create_mcp` first, then `navigate`
-- Record the `tabId`; if a "tab not found" error occurs at any point → return to Step 2 to re-discover
+**Stop gate:** Before calling `navigate` or `tabs_create_mcp`, confirm in your reasoning that Step 1 returned zero localhost tabs. Then:
+- Navigate an existing MCP tab to `url=http://localhost:<port>`
+- If the group has no tabs, call `tabs_create_mcp` first, then `navigate`
+- Record the `tabId`; if a "tab not found" error occurs → return to Step 1 to re-discover
 
 **Step 4 — Verify visually after code changes:**
 
