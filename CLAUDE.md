@@ -70,15 +70,13 @@ Use the Claude-in-Chrome extension (`mcp__claude-in-chrome__*` tools) for all UI
 - **Always use Chrome** via the Claude-in-Chrome extension
 - Never use other browsers (Safari, Firefox, Dia, Arc, etc.) for UI verification
 - Dia also has the Claude extension installed — **never call `switch_browser`**, it broadcasts to all browsers including Dia and is disruptive
-- Dev server default port is 5174, but may differ if that port is occupied
+- The MCP tool response has no `browser` field — there is no programmatic way to confirm Chrome vs Dia. The only safeguard is the "Multiple Chrome extensions connected" error. Ensure Dia's extension is not connected during Claude Code sessions.
+- **Always operate within the MCP tab group (Claude's dedicated window)** — never interact with tabs outside this group; never scan all-windows tabs
+- Dev server default port is 5173, but may differ if that port is occupied
 
 ### Project-Specific: Scale Transform
 
 `DashboardLayout.svelte` wraps the page with a `scale(0.5)` CSS transform. Screenshots show everything at **half the coded size** — a component written at `width: 1200px` appears as 600px in the browser. When evaluating screenshots, account for this: do not flag correctly-sized elements as "too small."
-
-### Dedicated Window Concept
-
-All Claude-navigated pages stay in a single dedicated Chrome window — separate from the user's other Chrome windows. Claude creates and reuses this window automatically; the user never opens it manually. The dedicated window is identified by matching `http://localhost:<port>` in the connected Chrome session.
 
 ### Connecting Chrome
 
@@ -88,31 +86,49 @@ Connection is established via a native messaging host — no manual "Connect" po
 
 **If disconnected:** Prompt the user **once**: _"The Chrome extension isn't connecting. Please run `/chrome` in Claude Code CLI, then let me know when done."_ Retry `tabs_context_mcp` once after they confirm. If still failing, note the issue and stop.
 
-If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the user to run `/chrome` → "Reconnect extension".
+**If `tabs_context_mcp` returns "Multiple Chrome extensions connected":** Dia's extension is also active. Prompt the user to run `/chrome` → "Reconnect extension" to restore a single connection, then retry.
 
-### Workflow Decision Tree
+### Workflow — Run Before Any UI Verification
 
-**Step 1 — Ensure the dev server is running:**
+**Step 1 — Ensure the dev server is running and find the port:**
+
+First, call `tabs_context_mcp({ createIfEmpty: true })` (Step 2 below) and check if any tab in the MCP group already has a `http://localhost:*` URL — extract `<port>` from it directly. If found, skip the rest of Step 1.
+
+Otherwise, scan for a running Node server:
 ```bash
-lsof -i :5173 -i :5174 -i :5175 | grep LISTEN
+lsof -i :5173-5185 | grep LISTEN | grep node
 ```
-- Port is listening → note it as `<port>`
-- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds
+- Port found → note as `<port>`
+- Nothing listening → run `npm run dev` in background; watch its stdout for the line `Local: http://localhost:<port>` to get the exact port; also retry `lsof` every 2s (up to 15s) as a fallback until a port responds
 
-**Step 2 — Verify extension connection** via `tabs_context_mcp`:
-- Returns tab data → proceed to Step 3
-- Returns "Browser extension is not connected" → prompt user once as above
+**Step 2 — Get the Claude window:**
 
-**Step 3 — Find the dedicated window** via `tabs_context_mcp`:
-- Look for any tab whose URL is `http://localhost:<port>` (this app has one route: `/`)
-- Multiple matches → prefer the window with the fewest total tabs
-- Match found → reuse that tab; do not open new windows or tabs
-- No match → go to Step 4
+Call `tabs_context_mcp({ createIfEmpty: true })`.
+- Returns tab list → proceed (the MCP group is Claude's dedicated window; a new window is only created when no group exists yet — subsequent calls never open a second window)
+- Returns "Browser extension is not connected" → prompt user once as above; retry once after confirmation
+- Returns "Multiple Chrome extensions connected" → prompt user to reconnect as above; retry once
 
-**Step 4 — Create the dedicated window** (only when Step 3 finds nothing):
-Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google Chrome"` or any bash command.
+**Step 3 — Find or open the localhost tab (within MCP group only):**
 
-**Step 5 — Stay in the dedicated window:**
-- All navigation: use `navigate` on the identified tab ID
-- Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
-- Re-screenshot after fixes before declaring complete
+Scan `availableTabs` returned in Step 2 for a tab whose `url` starts with `http://localhost:<port>`.
+- Found → record its `tabId` — **stop here, do not open another tab or window**
+- Not found → call `navigate` on an existing MCP tab with `url=http://localhost:<port>`; if the group has no tabs, call `tabs_create_mcp` first, then `navigate`
+- Record the `tabId`; if a "tab not found" error occurs at any point → return to Step 2 to re-discover
+
+**Step 4 — Verify visually after code changes:**
+
+1. Wait 2s for Vite HMR to auto-reload the page
+2. Call `read_console_messages` with pattern `(?i)(error|\[vite\])`:
+   - JS errors present → note them; they are likely the root cause of any visual issue
+   - `[vite] full reload` seen, or no `[vite]` messages at all → call `navigate` on the `tabId` with `http://localhost:<port>` to force a full reload, then wait 2s
+3. Take screenshot using `computer`
+4. Evaluate against the current feature plan/spec; account for 0.5x scale transform
+
+**Step 5 — Fix-verify loop (max 3 iterations total):**
+
+If the screenshot or console output shows a problem:
+1. Fix the code
+2. Repeat Step 4
+3. After 3 total attempts (original check + 2 fix attempts), **stop** — report the last screenshot, console output, and what was tried; ask the user for guidance
+
+**Mandatory connection check:** Before declaring any UI work complete, call `tabs_context_mcp` to confirm the extension is still connected.
