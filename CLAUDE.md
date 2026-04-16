@@ -65,6 +65,20 @@ To start a refactoring phase:
 
 Use the Claude-in-Chrome extension (`mcp__claude-in-chrome__*` tools) for all UI verification.
 
+### When to verify visually
+
+**For plan-driven work:**
+The plan is the authority. Trigger Chrome verification only at the exact step the plan marks for it, after all that step's prerequisite steps are complete. Do not verify earlier — even if visual files were already modified.
+
+**For ad-hoc requests (no plan):**
+Complete ALL code changes for the request first, then check: if any modified file's template, `<style>` block, Tailwind classes, or component structure changed, trigger Chrome verification once. Never verify after a single file edit if more changes are still needed to fulfill the request.
+
+**Skip Chrome verification when all changes are purely non-visual:**
+- TypeScript type fixes, interface changes, or type annotations only
+- Store or data logic with no change to rendered output
+- Utility functions, constants, or CSV parsing
+- A plan step has no verify instruction and no dependent verify step
+
 ### Rules
 
 - **Always use Chrome** via the Claude-in-Chrome extension
