@@ -102,6 +102,8 @@ Connection is established via a native messaging host — no manual "Connect" po
 
 **If disconnected:** Prompt the user **once**: _"The Chrome extension isn't connecting. Please run `/chrome` in Claude Code CLI, then let me know when done."_ Retry `tabs_context_mcp` once after they confirm. If still failing, note the issue and stop.
 
+**After Chrome restarts (full quit + reopen):** The extension tab group becomes orphaned — `tabs_context_mcp` may still return stale tab IDs, but `computer(screenshot)` will fail with "Failed to capture screenshot via CDP". If this happens, prompt the user once: _"It looks like Chrome was restarted. Please click the Claude in Chrome Beta extension button once to re-initialize the tab group, then let me know."_ Retry `tabs_context_mcp` after confirmation to get fresh tab IDs before proceeding.
+
 If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the user to run `/chrome` → "Reconnect extension".
 
 ### Workflow Decision Tree
@@ -135,4 +137,5 @@ Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google
   - No `[vite]` messages → HMR may not have fired; call `navigate` on the tab to force a reload, then wait 2s
   - JS errors present → note them; likely the root cause of any visual issue
 - Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
+  - If `computer(screenshot)` fails with "Failed to capture screenshot via CDP": the tab ID is stale (Chrome was likely restarted). Follow the post-restart recovery in "Connecting Chrome" above, then retry. While recovering, use `get_page_text` to confirm the page is at least live and rendering content.
 - If screenshot shows a problem, fix and re-screenshot (max 3 total attempts before escalating to the user)
