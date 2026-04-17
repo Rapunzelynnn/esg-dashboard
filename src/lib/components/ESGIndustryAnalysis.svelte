@@ -25,7 +25,7 @@ const BAR_COLORS: Record<ESGType, string> = {
   governance: '#6366f1'
 };
 
-const MARGIN = { top: 20, right: 20, bottom: 100, left: 60 };
+const MARGIN = { top: 20, right: 20, left: 60 };
 let containerWidth = $state(0);
 let innerW = $derived(Math.max(0, containerWidth - MARGIN.left - MARGIN.right));
 let innerH = $derived(expanded ? 440 : 280);
@@ -93,12 +93,14 @@ let industryData = $derived(
     })
 );
 
+let marginBottom = $derived(industryData.length > 15 ? 150 : 80);
+
 // Zoom setup — X-only pan/zoom for bar chart
 $effect(() => {
   if (!svgEl) return;
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([1, 8])
-    .translateExtent([[0, 0], [innerW + MARGIN.left + MARGIN.right, innerH + MARGIN.top + MARGIN.bottom]])
+    .translateExtent([[0, 0], [innerW + MARGIN.left + MARGIN.right, innerH + MARGIN.top + marginBottom]])
     .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
       // Only apply X translation/scale; keep Y fixed
       const t = event.transform;
@@ -130,20 +132,48 @@ $effect(() => {
   // Y axis (static)
   sel.select<SVGGElement>('.y-axis').call(d3.axisLeft(yScale).ticks(5));
 
-  // X axis — render only visible labels
+  // X axis — render only visible labels, rotating when bands are narrow
   const xAxisGroup = sel.select<SVGGElement>('.x-axis');
   xAxisGroup.selectAll('*').remove();
+  const shouldRotate = bwScaled < 80;
   industryData.forEach(d => {
     const xPos = xScaled(d.industryName);
     if (xPos < -bwScaled || xPos > innerW) return; // skip off-screen
-    xAxisGroup.append('text')
-      .attr('x', xPos + bwScaled / 2)
-      .attr('y', 16)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', Math.max(9, Math.min(12, bwScaled / 8)))
-      .attr('fill', d.industryName === highlightedIndustry ? '#2563eb' : '#4b5563')
-      .attr('font-weight', d.industryName === highlightedIndustry ? 'bold' : 'normal')
-      .text(formatIndustryName(d.industryName));
+    const cx = xPos + bwScaled / 2;
+    const isHighlighted = d.industryName === highlightedIndustry;
+    if (shouldRotate) {
+      xAxisGroup.append('text')
+        .attr('transform', `translate(${cx},8) rotate(-45)`)
+        .attr('text-anchor', 'end')
+        .attr('font-size', 10)
+        .attr('fill', isHighlighted ? '#2563eb' : '#4b5563')
+        .attr('font-weight', isHighlighted ? 'bold' : 'normal')
+        .text(d.industryName.length > 32 ? d.industryName.slice(0, 30) + '…' : d.industryName);
+    } else {
+      // Multi-line wrapping via tspan
+      const words = d.industryName.split(' ');
+      const lines: string[] = [''];
+      let lineIdx = 0;
+      words.forEach(w => {
+        if (lines[lineIdx].length + w.length > 15 && lines[lineIdx].length > 0) {
+          lineIdx++;
+          lines.push('');
+        }
+        lines[lineIdx] = lines[lineIdx] + (lines[lineIdx].length ? ' ' : '') + w;
+      });
+      const fontSize = Math.max(9, Math.min(12, bwScaled / 8));
+      const textEl = xAxisGroup.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', fontSize)
+        .attr('fill', isHighlighted ? '#2563eb' : '#4b5563')
+        .attr('font-weight', isHighlighted ? 'bold' : 'normal');
+      lines.forEach((lineText, i) => {
+        textEl.append('tspan')
+          .attr('x', cx)
+          .attr('dy', i === 0 ? 16 : '1.2em')
+          .text(lineText);
+      });
+    }
   });
 
   // Bars
@@ -358,7 +388,7 @@ function removeIndustry(industry: string) {
   </div>
 
   <!-- Chart -->
-  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px" bind:clientWidth={containerWidth}>
+  <div class="relative" style="height: {innerH + MARGIN.top + marginBottom}px" bind:clientWidth={containerWidth}>
     {#if tooltipContent.visible}
       <div
         class="absolute z-50 bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
@@ -380,7 +410,7 @@ function removeIndustry(industry: string) {
     <svg
       bind:this={svgEl}
       class="w-full h-full"
-      viewBox="0 0 {innerW + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
+      viewBox="0 0 {innerW + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + marginBottom}"
       preserveAspectRatio="none"
       aria-label="Industry ESG Score Breakdown Bar Chart"
     >
