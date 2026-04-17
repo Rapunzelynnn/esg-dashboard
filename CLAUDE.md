@@ -65,6 +65,20 @@ To start a refactoring phase:
 
 Use the Claude-in-Chrome extension (`mcp__claude-in-chrome__*` tools) for all UI verification.
 
+### When to verify visually
+
+**For plan-driven work:**
+The plan is the authority. Trigger Chrome verification only at the exact step the plan marks for it, after all that step's prerequisite steps are complete. Do not verify earlier — even if visual files were already modified.
+
+**For ad-hoc requests (no plan):**
+Complete ALL code changes for the request first, then check: if any modified file's template, `<style>` block, Tailwind classes, or component structure changed, trigger Chrome verification once. Never verify after a single file edit if more changes are still needed to fulfill the request.
+
+**Skip Chrome verification when all changes are purely non-visual:**
+- TypeScript type fixes, interface changes, or type annotations only
+- Store or data logic with no change to rendered output
+- Utility functions, constants, or CSV parsing
+- A plan step has no verify instruction and no dependent verify step
+
 ### Rules
 
 - **Always use Chrome** via the Claude-in-Chrome extension
@@ -88,7 +102,16 @@ Connection is established via a native messaging host — no manual "Connect" po
 
 **If disconnected:** Prompt the user **once**: _"The Chrome extension isn't connecting. Please run `/chrome` in Claude Code CLI, then let me know when done."_ Retry `tabs_context_mcp` once after they confirm. If still failing, note the issue and stop.
 
+**If `computer(screenshot)` fails with "Failed to capture screenshot via CDP":** The extension's service worker has gone idle — this happens during long sessions or after Chrome restarts. `tabs_context_mcp` may still return tab data (native messaging stays up) but CDP sessions are broken. Fix: prompt the user once: _"The Chrome extension's service worker has gone idle. Please type `/chrome` in this Claude Code session and select 'Reconnect extension', then let me know."_ While waiting, use `get_page_text` to confirm the page is live. After confirmation, retry `tabs_context_mcp` for fresh tab IDs, then retry the screenshot. If still failing after reconnect, note the issue and stop.
+
 If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the user to run `/chrome` → "Reconnect extension".
+
+**If `computer(screenshot)` fails with "Failed to deserialize params.clip.scale - BINDINGS: mandatory field missing":** This is a ghost tab — the tab ID returned by `tabs_context_mcp` exists in the extension's state but has no real Chrome window (its `window.innerWidth` is 0, causing the extension to compute `scale: NaN` which Chrome rejects). This happens when the user closes the dedicated Claude window between sessions.
+Fix (no user action needed):
+1. Call `navigate` on the ghost tab ID to any URL — this forces the extension to detect the tab is gone (`Tab <id> no longer exists` error is expected and correct)
+2. Call `tabs_context_mcp` with `createIfEmpty: true` to create a fresh tab in a real Chrome window
+3. Call `navigate` on the new tab ID to `http://localhost:<port>/`
+4. Verify `window.innerWidth > 0` via `javascript_tool` before screenshotting
 
 ### Workflow Decision Tree
 
@@ -97,7 +120,7 @@ If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the
 lsof -i :5173 -i :5174 -i :5175 | grep LISTEN
 ```
 - Port is listening → note it as `<port>`
-- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds
+- Nothing listening → run `npm run dev` in background, then retry `lsof` every 2s (up to 15s) until a port responds. If no port appears after 15s, stop and prompt the user: "The dev server didn't start — please check for errors and let me know when it's running."
 
 **Step 2 — Verify extension connection** via `tabs_context_mcp`:
 - Returns tab data → proceed to Step 3
@@ -114,5 +137,12 @@ Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google
 
 **Step 5 — Stay in the dedicated window:**
 - All navigation: use `navigate` on the identified tab ID
+- If the server dies mid-session (connection error in screenshot or console), re-run Step 1 to restart it before retrying
+- Before screenshotting: wait 2s for Vite HMR, then call `read_console_messages` with pattern `(?i)(error|\[vite\])`:
+  - `[vite] hmr update` seen → HMR succeeded; proceed to screenshot
+  - `[vite] full reload` seen → Vite is already reloading; wait an additional 2s, then screenshot
+  - No `[vite]` messages → HMR may not have fired; call `navigate` on the tab to force a reload, then wait 2s
+  - JS errors present → note them; likely the root cause of any visual issue
 - Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
-- Re-screenshot after fixes before declaring complete
+  - If `computer(screenshot)` fails with "Failed to capture screenshot via CDP": follow the service-worker recovery in "Connecting Chrome" above, then retry.
+- If screenshot shows a problem, fix and re-screenshot (max 3 total attempts before escalating to the user)

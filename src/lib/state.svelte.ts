@@ -15,5 +15,5 @@ export const appState = $state({
     dataAvailabilityFilter: [],
     sortBy: 'total_esg_score',
     sortDirection: 'desc'
-  } as FilterState
+  } satisfies FilterState
 });

@@ -1,8 +1,13 @@
 import type { Company } from '$lib/types';
 
-function safeParseFloat(value: string): number {
+function safeParseFloat(value: string | null | undefined): number {
+	if (value == null) return 0;
 	const parsed = parseFloat(value);
 	return isNaN(parsed) ? 0 : parsed;
+}
+
+function safeString(value: string | null | undefined): string {
+	return value ?? '';
 }
 
 function cleanCompanyName(name: string): string {
@@ -56,11 +61,11 @@ export function parseCSV(csvText: string): Company[] {
 			};
 
 			const company: Company = {
-				symbol: getValue('symbol'),
-				fullName: cleanCompanyName(getValue('fullname')),
-				industryCode: getValue('industry_code'),
-				industryName: getValue('industry_name'),
-				location: getValue('location'),
+				symbol: safeString(getValue('symbol')),
+				fullName: cleanCompanyName(safeString(getValue('fullname'))),
+				industryCode: safeString(getValue('industry_code')),
+				industryName: safeString(getValue('industry_name')),
+				location: safeString(getValue('location')),
 				marketCap: safeParseFloat(getValue('marketcap')),
 				beta: safeParseFloat(getValue('beta')),
 				esgScores: {
