@@ -102,9 +102,16 @@ Connection is established via a native messaging host — no manual "Connect" po
 
 **If disconnected:** Prompt the user **once**: _"The Chrome extension isn't connecting. Please run `/chrome` in Claude Code CLI, then let me know when done."_ Retry `tabs_context_mcp` once after they confirm. If still failing, note the issue and stop.
 
-**After Chrome restarts (full quit + reopen):** The extension tab group becomes orphaned — `tabs_context_mcp` may still return stale tab IDs, but `computer(screenshot)` will fail with "Failed to capture screenshot via CDP". If this happens, prompt the user once: _"It looks like Chrome was restarted. Please click the Claude in Chrome Beta extension button once to re-initialize the tab group, then let me know."_ Retry `tabs_context_mcp` after confirmation to get fresh tab IDs before proceeding.
+**If `computer(screenshot)` fails with "Failed to capture screenshot via CDP":** The extension's service worker has gone idle — this happens during long sessions or after Chrome restarts. `tabs_context_mcp` may still return tab data (native messaging stays up) but CDP sessions are broken. Fix: prompt the user once: _"The Chrome extension's service worker has gone idle. Please type `/chrome` in this Claude Code session and select 'Reconnect extension', then let me know."_ While waiting, use `get_page_text` to confirm the page is live. After confirmation, retry `tabs_context_mcp` for fresh tab IDs, then retry the screenshot. If still failing after reconnect, note the issue and stop.
 
 If `tabs_context_mcp` returns "Multiple Chrome extensions connected", prompt the user to run `/chrome` → "Reconnect extension".
+
+**If `computer(screenshot)` fails with "Failed to deserialize params.clip.scale - BINDINGS: mandatory field missing":** This is a ghost tab — the tab ID returned by `tabs_context_mcp` exists in the extension's state but has no real Chrome window (its `window.innerWidth` is 0, causing the extension to compute `scale: NaN` which Chrome rejects). This happens when the user closes the dedicated Claude window between sessions.
+Fix (no user action needed):
+1. Call `navigate` on the ghost tab ID to any URL — this forces the extension to detect the tab is gone (`Tab <id> no longer exists` error is expected and correct)
+2. Call `tabs_context_mcp` with `createIfEmpty: true` to create a fresh tab in a real Chrome window
+3. Call `navigate` on the new tab ID to `http://localhost:<port>/`
+4. Verify `window.innerWidth > 0` via `javascript_tool` before screenshotting
 
 ### Workflow Decision Tree
 
@@ -137,5 +144,5 @@ Call `tabs_context_mcp` with `createIfEmpty: true`. Do NOT use `open -na "Google
   - No `[vite]` messages → HMR may not have fired; call `navigate` on the tab to force a reload, then wait 2s
   - JS errors present → note them; likely the root cause of any visual issue
 - Use `computer` (screenshot) for visual verification — remember the 0.5x scale transform
-  - If `computer(screenshot)` fails with "Failed to capture screenshot via CDP": the tab ID is stale (Chrome was likely restarted). Follow the post-restart recovery in "Connecting Chrome" above, then retry. While recovering, use `get_page_text` to confirm the page is at least live and rendering content.
+  - If `computer(screenshot)` fails with "Failed to capture screenshot via CDP": follow the service-worker recovery in "Connecting Chrome" above, then retry.
 - If screenshot shows a problem, fix and re-screenshot (max 3 total attempts before escalating to the user)
