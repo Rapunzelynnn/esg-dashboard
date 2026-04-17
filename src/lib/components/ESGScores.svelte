@@ -70,7 +70,7 @@
 
 {#if showTotal}
 <!-- Total Score Circle - Larger size with no extra spacing -->
-<div class="w-56 h-56"> <!-- Increased size, removed extra margins -->
+<div class="w-40 h-40"> <!-- Tightened for stacked layout -->
     <div class="relative w-full h-full">
         <svg 
             viewBox="0 0 120 120" 
@@ -107,7 +107,7 @@
 {/if}
 
 {#if showBreakdown}
-<div class="space-y-5">
+<div class="space-y-4">
     {#each categories as category}
         {@const categoryData = esgScores[category]}
         {@const rating = getScoreRating(categoryData.score, categoryData.mean, categoryData.max)}

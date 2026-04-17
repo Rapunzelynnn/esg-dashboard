@@ -94,8 +94,8 @@
 </script>
 
 <div class="bg-white rounded-lg h-full">
-    <div class="text-sm font-medium text-gray-600 mb-1">Stock Price Trend (2023)</div>
-    <div class="h-[calc(100%-2rem)]">
+    <div class="text-xs font-medium text-gray-600 mb-0.5">Stock Price Trend (2023)</div>
+    <div class="h-[calc(100%-1.25rem)]">
         {#if !data}
             <div class="h-full flex items-center justify-center text-gray-500 text-sm">
                 No price data available for this symbol.
