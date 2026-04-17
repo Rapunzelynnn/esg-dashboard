@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-27
 **Branch strategy:** `main` (stable) → `dev` (integration) → feature branches → back to `dev` → `main`
-**Status:** Phase 2 complete, pending merge to `dev`
+**Status:** Phase 3 in progress — D3 migration code complete, chart width fix needed before PR to `dev`
 
 ---
 
@@ -27,7 +27,7 @@ Single-page SvelteKit app visualizing S&P 500 ESG data. Data is public and updat
 | 0 | — | Set up `dev` branch (done) | — | **Done** |
 | 1 | `refactor/data-layer` | Fix loading bugs, consolidate data module | — | **Done** |
 | 2 | `refactor/svelte5-migration` | Full Svelte 4 → 5 rewrite | Phase 1 | **Done** |
-| 3 | `refactor/d3-charts` | Replace Chart.js analysis charts with D3 | Phase 2 | Pending |
+| 3 | `refactor/d3-charts` | Replace Chart.js analysis charts with D3 | Phase 2 | **In Progress** — code complete, chart width fix pending before PR |
 | 4 | `chore/github-actions-data-update` | Python scraper + GitHub Actions workflow | Independent | Pending |
 
 Each phase: branch from `dev` → implement → PR into `dev` → when all phases stable → merge `dev` into `main`.
