@@ -42,7 +42,7 @@
       </div>
     </div>
     <div class="profile-content">
-      <CompanyProfile />
+      <CompanyProfile {loading} />
     </div>
   </div>
 

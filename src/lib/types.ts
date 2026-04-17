@@ -14,6 +14,7 @@ import type {
 export interface Company {
     symbol: string;
     fullName: string;
+    sector?: string;
     industryCode: string;
     industryName: string;
     location: string;
