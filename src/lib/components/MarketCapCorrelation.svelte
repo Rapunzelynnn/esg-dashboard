@@ -15,7 +15,8 @@ let { data = [], expanded = false }: Props = $props();
 
 // Chart dimensions
 const MARGIN = { top: 20, right: 20, bottom: 60, left: 75 };
-const INNER_W = 900;
+let containerWidth = $state(0);
+let innerW = $derived(Math.max(0, containerWidth - MARGIN.left - MARGIN.right));
 let innerH = $derived(expanded ? 540 : 340);
 
 // DOM ref + zoom state
@@ -114,7 +115,7 @@ $effect(() => {
 $effect(() => {
   if (!svgEl || filteredData.length === 0) return;
 
-  const xBase = d3.scaleLinear().domain([0, maxMarketCap]).range([0, INNER_W]);
+  const xBase = d3.scaleLinear().domain([0, maxMarketCap]).range([0, innerW]);
   const yBase = d3.scaleLinear().domain([minScore, maxScore]).range([innerH, 0]);
   const xS = zoomTransform.rescaleX(xBase);
   const yS = zoomTransform.rescaleY(yBase);
@@ -307,7 +308,7 @@ function handleDropdownClick(event: MouseEvent) {
   </div>
 
   <!-- Chart -->
-  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px">
+  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px" bind:clientWidth={containerWidth}>
     <!-- Tooltip overlay -->
     {#if tooltipCompany}
       <div
@@ -343,16 +344,17 @@ function handleDropdownClick(event: MouseEvent) {
       Reset View
     </button>
 
+    {#if innerW > 0}
     <svg
       bind:this={svgEl}
       class="w-full h-full"
-      viewBox="0 0 {INNER_W + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
-      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 {innerW + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
+      preserveAspectRatio="none"
       aria-label="ESG Score vs Market Cap Chart"
     >
       <defs>
         <clipPath id="clip-mcc">
-          <rect width={INNER_W} height={innerH}></rect>
+          <rect width={innerW} height={innerH}></rect>
         </clipPath>
       </defs>
       <g transform="translate({MARGIN.left},{MARGIN.top})">
@@ -360,7 +362,7 @@ function handleDropdownClick(event: MouseEvent) {
         <g class="y-axis"></g>
         <!-- Axis labels -->
         <text
-          x={INNER_W / 2}
+          x={innerW / 2}
           y={innerH + MARGIN.bottom - 8}
           text-anchor="middle"
           font-size="13"
@@ -378,6 +380,7 @@ function handleDropdownClick(event: MouseEvent) {
         <g class="circles" clip-path="url(#clip-mcc)"></g>
       </g>
     </svg>
+    {/if}
   </div>
 
   <!-- Statistics Panel -->

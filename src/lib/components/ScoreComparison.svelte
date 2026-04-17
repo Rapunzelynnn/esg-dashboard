@@ -14,7 +14,8 @@ interface Props {
 let { data = [], expanded = false }: Props = $props();
 
 const MARGIN = { top: 20, right: 20, bottom: 60, left: 75 };
-const INNER_W = 900;
+let containerWidth = $state(0);
+let innerW = $derived(Math.max(0, containerWidth - MARGIN.left - MARGIN.right));
 let innerH = $derived(expanded ? 540 : 340);
 
 let svgEl = $state<SVGSVGElement | null>(null);
@@ -90,7 +91,7 @@ $effect(() => {
 $effect(() => {
   if (!svgEl || processedData.length === 0) return;
 
-  const xBase = d3.scaleLinear().domain([0, 100]).range([0, INNER_W]);
+  const xBase = d3.scaleLinear().domain([0, 100]).range([0, innerW]);
   const yBase = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
   const xS = zoomTransform.rescaleX(xBase);
   const yS = zoomTransform.rescaleY(yBase);
@@ -252,7 +253,7 @@ function handleDropdownClick(event: MouseEvent) {
   </div>
 
   <!-- Chart -->
-  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px">
+  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px" bind:clientWidth={containerWidth}>
     {#if tooltipCompany}
       <div
         class="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72 pointer-events-none"
@@ -293,26 +294,28 @@ function handleDropdownClick(event: MouseEvent) {
       </div>
     </div>
 
+    {#if innerW > 0}
     <svg
       bind:this={svgEl}
       class="w-full h-full"
-      viewBox="0 0 {INNER_W + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
-      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 {innerW + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
+      preserveAspectRatio="none"
       aria-label="ESG Score Components Bubble Chart"
     >
       <defs>
         <clipPath id="clip-sc">
-          <rect width={INNER_W} height={innerH}></rect>
+          <rect width={innerW} height={innerH}></rect>
         </clipPath>
       </defs>
       <g transform="translate({MARGIN.left},{MARGIN.top})">
         <g class="x-axis" transform="translate(0,{innerH})"></g>
         <g class="y-axis"></g>
-        <text x={INNER_W / 2} y={innerH + MARGIN.bottom - 8} text-anchor="middle" font-size="13" fill="#4b5563">Environmental Score</text>
+        <text x={innerW / 2} y={innerH + MARGIN.bottom - 8} text-anchor="middle" font-size="13" fill="#4b5563">Environmental Score</text>
         <text transform="rotate(-90)" x={-innerH / 2} y={-MARGIN.left + 16} text-anchor="middle" font-size="13" fill="#4b5563">Social Score</text>
         <g class="circles" clip-path="url(#clip-sc)"></g>
       </g>
     </svg>
+    {/if}
   </div>
 
   <!-- Statistics Panel -->

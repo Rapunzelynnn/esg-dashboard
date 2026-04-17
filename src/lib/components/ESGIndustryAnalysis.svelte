@@ -26,7 +26,8 @@ const BAR_COLORS: Record<ESGType, string> = {
 };
 
 const MARGIN = { top: 20, right: 20, bottom: 100, left: 60 };
-const INNER_W = 900;
+let containerWidth = $state(0);
+let innerW = $derived(Math.max(0, containerWidth - MARGIN.left - MARGIN.right));
 let innerH = $derived(expanded ? 440 : 280);
 
 const industryCategories: Record<string, string[]> = {
@@ -97,7 +98,7 @@ $effect(() => {
   if (!svgEl) return;
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([1, 8])
-    .translateExtent([[0, 0], [INNER_W + MARGIN.left + MARGIN.right, innerH + MARGIN.top + MARGIN.bottom]])
+    .translateExtent([[0, 0], [innerW + MARGIN.left + MARGIN.right, innerH + MARGIN.top + MARGIN.bottom]])
     .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
       // Only apply X translation/scale; keep Y fixed
       const t = event.transform;
@@ -113,7 +114,7 @@ $effect(() => {
   if (!svgEl || industryData.length === 0) return;
 
   const names = industryData.map(d => d.industryName);
-  const xBase = d3.scaleBand().domain(names).range([0, INNER_W]).padding(0.25);
+  const xBase = d3.scaleBand().domain(names).range([0, innerW]).padding(0.25);
   const xBarBase = d3.scaleBand().domain(['environmental', 'social', 'governance'] as ESGType[]).range([0, xBase.bandwidth()]).padding(0.05);
   const yScale = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
 
@@ -134,7 +135,7 @@ $effect(() => {
   xAxisGroup.selectAll('*').remove();
   industryData.forEach(d => {
     const xPos = xScaled(d.industryName);
-    if (xPos < -bwScaled || xPos > INNER_W) return; // skip off-screen
+    if (xPos < -bwScaled || xPos > innerW) return; // skip off-screen
     xAxisGroup.append('text')
       .attr('x', xPos + bwScaled / 2)
       .attr('y', 16)
@@ -357,7 +358,7 @@ function removeIndustry(industry: string) {
   </div>
 
   <!-- Chart -->
-  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px">
+  <div class="relative" style="height: {innerH + MARGIN.top + MARGIN.bottom}px" bind:clientWidth={containerWidth}>
     {#if tooltipContent.visible}
       <div
         class="absolute z-50 bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
@@ -375,16 +376,17 @@ function removeIndustry(industry: string) {
       onclick={doResetZoom}
     >Reset View</button>
 
+    {#if innerW > 0}
     <svg
       bind:this={svgEl}
       class="w-full h-full"
-      viewBox="0 0 {INNER_W + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
-      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 {innerW + MARGIN.left + MARGIN.right} {innerH + MARGIN.top + MARGIN.bottom}"
+      preserveAspectRatio="none"
       aria-label="Industry ESG Score Breakdown Bar Chart"
     >
       <defs>
         <clipPath id="clip-eia">
-          <rect width={INNER_W} height={innerH}></rect>
+          <rect width={innerW} height={innerH}></rect>
         </clipPath>
       </defs>
       <g transform="translate({MARGIN.left},{MARGIN.top})">
@@ -397,6 +399,7 @@ function removeIndustry(industry: string) {
         <g class="bars" clip-path="url(#clip-eia)"></g>
       </g>
     </svg>
+    {/if}
   </div>
 
   <!-- Legend -->
