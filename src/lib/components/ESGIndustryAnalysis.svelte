@@ -93,7 +93,11 @@ let industryData = $derived(
     })
 );
 
-let marginBottom = $derived(industryData.length > 15 ? 150 : 80);
+let xBase = $derived(
+  d3.scaleBand().domain(industryData.map(d => d.industryName)).range([0, innerW]).padding(0.25)
+);
+let bwScaled = $derived(xBase.bandwidth() * zoomTransform.k);
+let marginBottom = $derived(bwScaled < 80 ? 150 : 80);
 
 // Zoom setup — X-only pan/zoom for bar chart
 $effect(() => {
@@ -115,8 +119,6 @@ $effect(() => {
 $effect(() => {
   if (!svgEl || industryData.length === 0) return;
 
-  const names = industryData.map(d => d.industryName);
-  const xBase = d3.scaleBand().domain(names).range([0, innerW]).padding(0.25);
   const xBarBase = d3.scaleBand().domain(['environmental', 'social', 'governance'] as ESGType[]).range([0, xBase.bandwidth()]).padding(0.05);
   const yScale = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
 
@@ -125,7 +127,6 @@ $effect(() => {
     const original = xBase(name) ?? 0;
     return zoomTransform.x + original * zoomTransform.k;
   };
-  const bwScaled = xBase.bandwidth() * zoomTransform.k;
 
   const sel = d3.select(svgEl);
 
@@ -244,17 +245,6 @@ function processData(companies: Company[]): IndustryData[] {
 
 function avg(arr: number[]): number {
   return arr.length ? Number((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)) : 0;
-}
-
-function formatIndustryName(name: string): string {
-  const words = name.split(' ');
-  const lines: string[] = [''];
-  let line = 0;
-  words.forEach(w => {
-    if (lines[line].length + w.length > 15 && lines[line].length > 0) { line++; lines[line] = ''; }
-    lines[line] = lines[line] + (lines[line].length ? ' ' : '') + w;
-  });
-  return lines.join('\n');
 }
 
 function getIndustryCategory(name: string): string {
