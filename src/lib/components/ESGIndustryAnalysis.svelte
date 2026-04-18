@@ -119,8 +119,9 @@ $effect(() => {
 $effect(() => {
   if (!svgEl || industryData.length === 0) return;
 
-  const xBarBase = d3.scaleBand().domain(['environmental', 'social', 'governance'] as ESGType[]).range([0, xBase.bandwidth()]).padding(0.05);
+  const xBarBase = d3.scaleBand().domain(['environmental', 'social', 'governance'] as ESGType[]).range([0, xBase.bandwidth()]).padding(0.01);
   const yScale = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
+  const MAX_BAR_WIDTH = 40; // cap bar width so bars don't stretch excessively with few industries
 
   // Apply zoom transform to x scales only
   const xScaled = (name: string) => {
@@ -192,11 +193,16 @@ $effect(() => {
       const xPos = xScaled(d.industryName);
       d3.select(this).attr('transform', `translate(${xPos},0)`);
 
+      const rawBarW = xBarBase.bandwidth() * zoomTransform.k;
+      const barW = Math.min(rawBarW, MAX_BAR_WIDTH);
+      const barGap = 2;
+      const groupW = 3 * barW + 2 * barGap;
+      const groupStart = (bwScaled - groupW) / 2;
       d3.select(this).selectAll<SVGRectElement, ESGType>('rect')
         .data(esgTypes)
         .join('rect')
-        .attr('x', type => (xBarBase(type) ?? 0) * zoomTransform.k)
-        .attr('width', xBarBase.bandwidth() * zoomTransform.k)
+        .attr('x', (_type, i) => groupStart + i * (barW + barGap))
+        .attr('width', barW)
         .attr('y', type => yScale(d[type]))
         .attr('height', type => innerH - yScale(d[type]))
         .attr('fill', type => BAR_COLORS[type])
