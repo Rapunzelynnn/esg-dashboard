@@ -66,7 +66,7 @@
     {#if loading}
       <div class="centered-message">Loading data...</div>
     {:else if appState.companies.length > 0}
-      <Card class="content-card">
+      <Card class="content-card" style="flex:1;display:flex;flex-direction:column;min-height:600px;">
         {#if activeChart === 0}
           <ESGIndustryAnalysis data={appState.companies} expanded={false} />
         {:else if activeChart === 1}
