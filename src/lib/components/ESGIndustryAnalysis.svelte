@@ -210,8 +210,10 @@ $effect(() => {
         .style('cursor', 'pointer')
         .on('mouseenter', function(event: MouseEvent, type: ESGType) {
           const rect = svgEl!.getBoundingClientRect();
+          const scaleX = rect.width / svgEl!.viewBox.baseVal.width;
+          const scaleY = rect.height / svgEl!.viewBox.baseVal.height;
           tooltipContent = { visible: true, score: d[type], type, industryName: d.industryName };
-          tooltipPos = { x: event.clientX - rect.left + 14, y: event.clientY - rect.top - 14 };
+          tooltipPos = { x: (event.clientX - rect.left) / scaleX + 14, y: (event.clientY - rect.top) / scaleY - 14 };
         })
         .on('mouseleave', () => { tooltipContent = { ...tooltipContent, visible: false }; });
     });
